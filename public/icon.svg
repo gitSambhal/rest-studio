@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="#1e293b" stroke-width="8" />
+
+  <!-- Pulse Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="16 12" opacity="0.3" />
+
+  <!-- Central Hexagon / Icon Box -->
+  <rect x="128" y="128" width="256" height="256" rx="64" fill="url(#pulseGrad)" filter="url(#glow)" />
+
+  <!-- Lightning / Zap Bolt -->
+  <path d="M 276 168 L 192 272 H 260 L 236 344 L 320 240 H 252 Z" fill="#020617" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

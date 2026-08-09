@@ -1,0 +1,6 @@
+{
+  "name": "RestStudio",
+  "description": "Offline-first Postman alternative REST client developed by Suhail Akhtar (suhail.top) supporting .rest files, multi-project workspace, per-project environment variables with autocomplete, HTTP request runner, dark/light theme, and offline local cache.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

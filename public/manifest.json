@@ -1,0 +1,22 @@
+{
+  "short_name": "RestStudio",
+  "name": "RestStudio - Offline-First REST Workspace",
+  "developer": {
+    "name": "Suhail Akhtar",
+    "url": "https://suhail.top"
+  },
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "any",
+  "description": "High-performance Offline-First REST Workspace & API Client created by Suhail Akhtar (suhail.top)"
+}

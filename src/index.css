@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+.light-theme {
+  color-scheme: light;
+}
+
+/* 1. Base Canvas and Page Backgrounds */
+.light-theme,
+.light-theme body,
+.light-theme #root {
+  background-color: #f8fafc !important; /* slate-50 */
+  color: #0f172a !important; /* slate-900 */
+}
+
+/* 2. Container Panels & Surface Elements in Light Mode */
+.light-theme [class~="bg-slate-950"],
+.light-theme [class*="bg-slate-950/"],
+.light-theme [class~="bg-slate-900"],
+.light-theme [class*="bg-slate-900/"],
+.light-theme [class~="bg-slate-850"],
+.light-theme [class*="bg-slate-850/"] {
+  background-color: #ffffff !important;
+}
+
+/* Sub-panels, card headers, table headers, toolbar containers */
+.light-theme [class~="bg-slate-800"],
+.light-theme [class*="bg-slate-800/"] {
+  background-color: #f1f5f9 !important; /* slate-100 */
+}
+
+.light-theme [class~="bg-slate-700"],
+.light-theme [class*="bg-slate-700/"] {
+  background-color: #e2e8f0 !important; /* slate-200 */
+}
+
+/* Hover States in Light Mode */
+.light-theme [class*="hover:bg-slate-900"]:hover,
+.light-theme [class*="hover:bg-slate-800"]:hover,
+.light-theme [class*="hover:bg-slate-700"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.light-theme [class*="hover:bg-slate-800/60"]:hover,
+.light-theme [class*="hover:bg-slate-700/60"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+/* 3. Crisp High Contrast Borders */
+.light-theme [class~="border-slate-950"],
+.light-theme [class*="border-slate-950/"],
+.light-theme [class~="border-slate-900"],
+.light-theme [class*="border-slate-900/"],
+.light-theme [class~="border-slate-850"],
+.light-theme [class*="border-slate-850/"],
+.light-theme [class~="border-slate-800"],
+.light-theme [class*="border-slate-800/"] {
+  border-color: #cbd5e1 !important; /* slate-300 */
+}
+
+.light-theme [class~="border-slate-700"],
+.light-theme [class*="border-slate-700/"] {
+  border-color: #94a3b8 !important; /* slate-400 */
+}
+
+.light-theme [class*="divide-slate-800"] > * + *,
+.light-theme [class*="divide-slate-700"] > * + * {
+  border-color: #e2e8f0 !important;
+}
+
+/* 4. Text Contrast Overrides for Light Mode (WCAG AAA/AA) */
+.light-theme [class~="text-slate-100"],
+.light-theme [class*="text-slate-100/"],
+.light-theme [class~="text-slate-200"],
+.light-theme [class*="text-slate-200/"] {
+  color: #0f172a !important; /* slate-900 - pitch dark slate */
+}
+
+.light-theme [class~="text-slate-300"],
+.light-theme [class*="text-slate-300/"] {
+  color: #1e293b !important; /* slate-800 */
+}
+
+.light-theme [class~="text-slate-400"],
+.light-theme [class*="text-slate-400/"] {
+  color: #334155 !important; /* slate-700 - high contrast secondary */
+}
+
+.light-theme [class~="text-slate-500"],
+.light-theme [class*="text-slate-500/"] {
+  color: #475569 !important; /* slate-600 */
+}
+
+.light-theme [class~="text-slate-600"],
+.light-theme [class*="text-slate-600/"] {
+  color: #64748b !important; /* slate-500 */
+}
+
+.light-theme [class*="hover:text-slate-100"]:hover,
+.light-theme [class*="hover:text-slate-200"]:hover {
+  color: #0f172a !important;
+}
+
+.light-theme [class*="hover:text-slate-300"]:hover,
+.light-theme [class*="hover:text-slate-400"]:hover {
+  color: #1e293b !important;
+}
+
+/* Header text overrides */
+.light-theme header span.text-white {
+  color: #0f172a !important;
+}
+
+/* Sidebar tree items and request names in Light Mode */
+.light-theme aside .truncate,
+.light-theme aside span.truncate,
+.light-theme aside [class*="text-slate-"] {
+  color: #0f172a !important;
+}
+
+/* 5. Rich Accent & Badge Colors in Light Mode */
+.light-theme [class*="text-emerald-300"],
+.light-theme [class*="text-emerald-400"],
+.light-theme [class*="text-emerald-500"] {
+  color: #047857 !important; /* Emerald 700 */
+}
+
+.light-theme [class*="text-amber-200"],
+.light-theme [class*="text-amber-300"],
+.light-theme [class*="text-amber-400"],
+.light-theme [class*="text-amber-500"] {
+  color: #b45309 !important; /* Amber 700 */
+}
+
+.light-theme [class*="text-teal-200"],
+.light-theme [class*="text-teal-300"],
+.light-theme [class*="text-teal-400"],
+.light-theme [class*="text-teal-500"] {
+  color: #0f766e !important; /* Teal 700 */
+}
+
+.light-theme [class*="text-sky-300"],
+.light-theme [class*="text-sky-400"],
+.light-theme [class*="text-sky-500"] {
+  color: #0369a1 !important; /* Sky 700 */
+}
+
+.light-theme [class*="text-purple-300"],
+.light-theme [class*="text-purple-400"],
+.light-theme [class*="text-purple-500"] {
+  color: #6b21a8 !important; /* Purple 700 */
+}
+
+.light-theme [class*="text-rose-300"],
+.light-theme [class*="text-rose-400"],
+.light-theme [class*="text-rose-500"] {
+  color: #be123c !important; /* Rose 700 */
+}
+
+.light-theme [class*="text-blue-300"],
+.light-theme [class*="text-blue-400"],
+.light-theme [class*="text-blue-500"] {
+  color: #1d4ed8 !important; /* Blue 700 */
+}
+
+/* Accent Badge Backgrounds in Light Mode */
+.light-theme [class*="bg-emerald-500/10"],
+.light-theme [class*="bg-emerald-500/20"] {
+  background-color: #d1fae5 !important;
+}
+
+.light-theme [class*="bg-amber-500/10"],
+.light-theme [class*="bg-amber-500/20"] {
+  background-color: #fef3c7 !important;
+}
+
+.light-theme [class*="bg-sky-500/10"],
+.light-theme [class*="bg-sky-500/20"] {
+  background-color: #e0f2fe !important;
+}
+
+.light-theme [class*="bg-purple-500/10"],
+.light-theme [class*="bg-purple-500/20"] {
+  background-color: #f3e8ff !important;
+}
+
+.light-theme [class*="bg-rose-500/10"],
+.light-theme [class*="bg-rose-500/20"] {
+  background-color: #ffe4e6 !important;
+}
+
+.light-theme [class*="bg-teal-500/10"],
+.light-theme [class*="bg-teal-500/20"] {
+  background-color: #ccfbf1 !important;
+}
+
+/* 6. Form Inputs, Selects, and Textareas */
+.light-theme input,
+.light-theme textarea,
+.light-theme select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-theme input:focus,
+.light-theme textarea:focus,
+.light-theme select:focus {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #0284c7 !important;
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Code blocks, pre tags, and monospace elements in Light Mode */
+.light-theme pre,
+.light-theme code {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-theme kbd {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Scrollbars in Light Mode */
+.light-theme ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>RestStudio - Offline-First REST API Client & Workspace by Suhail Akhtar</title>
+    <meta name="title" content="RestStudio - Offline-First REST API Client & Workspace by Suhail Akhtar" />
+    <meta name="description" content="RestStudio is a powerful, offline-first REST API client, Postman alternative, and HTTP testing workspace built by Suhail Akhtar (suhail.top). Features syntax-highlighted .rest file execution, environment variables, pre-request scripts, OAuth tokens, and response snapshots." />
+    <meta name="keywords" content="RestStudio, REST API Client, Postman Alternative, Insomnia Alternative, Offline REST Workspace, .rest script runner, .http parser, API Client, Environment Variables, Pre-request Scripts, API Testing Tool, Suhail Akhtar, suhail.top, Developer Tools" />
+    <meta name="author" content="Suhail Akhtar" />
+    <meta name="publisher" content="Suhail Akhtar (suhail.top)" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://suhail.top" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://suhail.top" />
+    <meta property="og:title" content="RestStudio - Offline-First REST API Workspace by Suhail Akhtar" />
+    <meta property="og:description" content="A blazingly fast, privacy-focused offline REST API client & Postman alternative created by Suhail Akhtar. Execute .rest scripts, manage environment profiles, and inspect API responses." />
+    <meta property="og:image" content="/icon.svg" />
+    <meta property="og:site_name" content="RestStudio Workspace" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://suhail.top" />
+    <meta property="twitter:title" content="RestStudio - Offline-First REST API Workspace by Suhail Akhtar" />
+    <meta property="twitter:description" content="A blazingly fast, privacy-focused offline REST API client & Postman alternative created by Suhail Akhtar (suhail.top)." />
+    <meta property="twitter:image" content="/icon.svg" />
+    <meta property="twitter:creator" content="@suhailakhtar" />
+
+    <!-- Favicons & Web App Manifest -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- JSON-LD Structured Data for Rich Google Search Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "RestStudio",
+      "alternateName": ["RestStudio API Workspace", "RestStudio REST Client"],
+      "url": "https://suhail.top",
+      "description": "RestStudio is a privacy-first, offline-capable REST API workspace and Postman alternative designed by Suhail Akhtar.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "All",
+      "author": {
+        "@type": "Person",
+        "name": "Suhail Akhtar",
+        "url": "https://suhail.top"
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "Suhail Akhtar",
+        "url": "https://suhail.top"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "softwareVersion": "1.0"
+    }
+    </script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then((registration) => {
+              console.log('[RestStudio SW] Registered successfully:', registration.scope);
+            })
+            .catch((error) => {
+              console.warn('[RestStudio SW] Registration failed:', error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
