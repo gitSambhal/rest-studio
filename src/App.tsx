@@ -27,6 +27,7 @@ import { CollectionRunner } from './components/CollectionRunner';
 import { HistoryViewer } from './components/HistoryViewer';
 import { ImportExportModal } from './components/ImportExportModal';
 import { QuickHelpModal } from './components/QuickHelpModal';
+import { SettingsModal } from './components/SettingsModal';
 import { PromptModal } from './components/PromptModal';
 import { TabBar } from './components/TabBar';
 import { OnboardingScreen } from './components/OnboardingScreen';
@@ -35,6 +36,7 @@ import { ScopeContext, resolveEnvVariables } from './utils/envUtils';
 import { parseRestFileContent } from './utils/restParser';
 import { evaluateAssertions } from './utils/testUtils';
 import { runPreRequestScript, runPostRequestScript } from './utils/scriptRunner';
+import { executeHttpRequest } from './utils/httpExecutor';
 
 export default function App() {
   // 1. Global Variables
@@ -202,6 +204,7 @@ export default function App() {
   const [isEnvManagerOpen, setIsEnvManagerOpen] = useState<boolean>(false);
   const [isImportExportOpen, setIsImportExportOpen] = useState<boolean>(false);
   const [isQuickHelpOpen, setIsQuickHelpOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   // Execution State
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
@@ -493,18 +496,12 @@ export default function App() {
     }
 
     try {
-      const res = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: req.method,
-          url: targetUrl,
-          headers: resolvedHeaders,
-          body: resolvedBody,
-        }),
+      const responseData = await executeHttpRequest({
+        method: req.method,
+        url: targetUrl,
+        headers: resolvedHeaders,
+        body: resolvedBody,
       });
-
-      const responseData: ExecutionResponse = await res.json();
       responseData.scriptLogs = scriptLogs;
 
       // 7. RUN POST-REQUEST SCRIPT IF ENABLED
@@ -1257,6 +1254,7 @@ export default function App() {
         onChangeTab={setActiveTabMode}
         onOpenImportExport={() => setIsImportExportOpen(true)}
         onOpenQuickHelp={() => setIsQuickHelpOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         historyCount={history.length}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
@@ -1548,6 +1546,15 @@ export default function App() {
       {isQuickHelpOpen && (
         <QuickHelpModal onClose={() => setIsQuickHelpOpen(false)} />
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={handleToggleDarkMode}
+        showToast={showToast}
+      />
 
       {/* Global App Prompt Modal */}
       <PromptModal

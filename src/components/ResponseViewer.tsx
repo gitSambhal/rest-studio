@@ -53,7 +53,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
       <div className="h-full bg-slate-950 border-t border-slate-800 flex flex-col items-center justify-center text-slate-400 p-8">
         <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
         <p className="font-semibold text-slate-200 text-sm">Executing HTTP Request...</p>
-        <p className="text-xs text-slate-500 font-mono mt-1">Routing via server proxy to bypass browser CORS</p>
+        <p className="text-xs text-slate-500 font-mono mt-1">Executing request via HTTP engine (auto client / proxy)</p>
       </div>
     );
   }

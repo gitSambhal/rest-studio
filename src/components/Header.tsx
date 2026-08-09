@@ -38,6 +38,7 @@ interface HeaderProps {
   onChangeTab: (tab: any) => void;
   onOpenImportExport: () => void;
   onOpenQuickHelp: () => void;
+  onOpenSettings?: () => void;
   historyCount: number;
 
   isDarkMode: boolean;
@@ -59,6 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
   onChangeTab,
   onOpenImportExport,
   onOpenQuickHelp,
+  onOpenSettings,
   historyCount,
   isDarkMode,
   onToggleDarkMode,
@@ -429,6 +431,21 @@ export const Header: React.FC<HeaderProps> = ({
                     System & Help
                   </div>
                   
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenSettings) onOpenSettings();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-700/70 font-medium flex items-center space-x-2.5 transition-colors cursor-pointer"
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold leading-tight">Request Execution Engine</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Auto fallback, Direct Client & CORS Proxy</span>
+                    </div>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {

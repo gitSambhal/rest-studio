@@ -1,5 +1,6 @@
 import { ExecutionResponse, KeyValuePair, PostRequestScript, PreRequestScript, RestRequest, TestAssertion } from '../types';
 import { resolveEnvVariables, ScopeContext } from './envUtils';
+import { executeHttpRequest } from './httpExecutor';
 
 export interface PreRequestRunResult {
   success: boolean;
@@ -112,18 +113,12 @@ export async function runPreRequestScript(
 
     try {
       logs.push(`[Token Fetcher] Sending pre-flight ${cfg.method || 'POST'} request...`);
-      const proxyRes = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: cfg.method || 'POST',
-          url: resolvedTokenUrl,
-          headers: fetchHeaders,
-          body: fetchBody,
-        }),
+      const responseData: ExecutionResponse = await executeHttpRequest({
+        method: cfg.method || 'POST',
+        url: resolvedTokenUrl,
+        headers: fetchHeaders,
+        body: fetchBody,
       });
-
-      const responseData: ExecutionResponse = await proxyRes.json();
 
       if (!responseData.ok && responseData.status >= 400) {
         const errMsg = `Pre-flight Token Fetch returned HTTP status ${responseData.status} (${responseData.statusText})`;
