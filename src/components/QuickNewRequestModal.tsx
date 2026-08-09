@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HTTPMethod, Project, RestFile, RestRequest } from '../types';
 import { X, Plus, Code2, Globe, FileCode, Sparkles, CornerDownLeft, Eye, Zap, CheckCircle2 } from 'lucide-react';
 import { resolveEnvVariables, ScopeContext } from '../utils/envUtils';
@@ -9,6 +9,7 @@ interface QuickNewRequestModalProps {
   project: Project;
   activeFileId: string | null;
   isDarkMode?: boolean;
+  initialPasteText?: string;
   onClose: () => void;
   onCreateRequest: (fileId: string, method: HTTPMethod, name: string, url?: string, extraRequestProps?: Partial<RestRequest>) => void;
   onCreateNewFileAndRequest: (fileName: string, method: HTTPMethod, name: string, url?: string, extraRequestProps?: Partial<RestRequest>) => void;
@@ -30,6 +31,7 @@ export const QuickNewRequestModal: React.FC<QuickNewRequestModalProps> = ({
   project,
   activeFileId,
   isDarkMode = true,
+  initialPasteText = '',
   onClose,
   onCreateRequest,
   onCreateNewFileAndRequest,
@@ -40,9 +42,31 @@ export const QuickNewRequestModal: React.FC<QuickNewRequestModalProps> = ({
 
   const [selectedMethod, setSelectedMethod] = useState<HTTPMethod>('GET');
   const [requestName, setRequestName] = useState('');
-  const [requestUrl, setRequestUrl] = useState('{{baseUrl}}/users');
+  const [requestUrl, setRequestUrl] = useState(initialPasteText || '{{baseUrl}}/users');
   const [targetFileId, setTargetFileId] = useState<string>(defaultTargetFileId);
   const [newFileName, setNewFileName] = useState('api_endpoints.rest');
+  const [extraProps, setExtraProps] = useState<Partial<RestRequest> | null>(null);
+
+  useEffect(() => {
+    if (initialPasteText) {
+      setRequestUrl(initialPasteText);
+      const res = detectAndParsePaste(initialPasteText);
+      if (res && res.requests.length > 0) {
+        const req = res.requests[0];
+        setSelectedMethod(req.method);
+        setRequestUrl(req.url);
+        if (!requestName || requestName.trim() === '') {
+          setRequestName(req.name);
+        }
+        setExtraProps({
+          headers: req.headers,
+          queryParams: req.queryParams,
+          body: req.body,
+          auth: req.auth,
+        });
+      }
+    }
+  }, [initialPasteText]);
 
   const activeEnv = project?.environments?.find((e) => e.id === project?.activeEnvId);
   const targetFile = files.find((f) => f.id === targetFileId);
@@ -56,7 +80,6 @@ export const QuickNewRequestModal: React.FC<QuickNewRequestModalProps> = ({
 
   const resolution = resolveEnvVariables(requestUrl, scopeCtx);
   const detectedPaste = detectAndParsePaste(requestUrl);
-  const [extraProps, setExtraProps] = useState<Partial<RestRequest> | null>(null);
 
   const handleApplySmartPaste = () => {
     if (!detectedPaste || detectedPaste.requests.length === 0) return;

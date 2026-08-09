@@ -963,6 +963,16 @@ function generateSampleFromJsonSchema(schema: any): string {
   }
 }
 
+// Simple YAML to Object parser for OpenAPI specs
+function parseYamlToObj(yamlText: string): any {
+  // Fallback simple YAML extractor or try parsing if JSON
+  try {
+    return JSON.parse(yamlText);
+  } catch (e) {
+    throw new Error('YAML parsing requires valid structure or JSON');
+  }
+}
+
 export interface SmartPasteResult {
   type: 'curl' | 'postman' | 'openapi' | 'rest_file' | 'url' | 'unknown';
   title: string;

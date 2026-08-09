@@ -392,34 +392,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* SECTION 3: Quick Action Buttons & Settings Menu */}
+        {/* SECTION 3: Settings & Tools Menu */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 md:order-3">
-          {/* Quick New Request Button */}
-          {onOpenQuickNewRequest && (
-            <button
-              type="button"
-              onClick={onOpenQuickNewRequest}
-              className="flex items-center space-x-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shadow-md shadow-emerald-500/20 active:scale-95"
-              title="Quick New Request (Ctrl + N)"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span className="hidden sm:inline">New Request</span>
-            </button>
-          )}
-
-          {/* Quick Request from cURL Button */}
-          {onOpenQuickCurl && (
-            <button
-              type="button"
-              onClick={onOpenQuickCurl}
-              className="flex items-center space-x-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs px-2 sm:px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer active:scale-95"
-              title="Quick Request from cURL (Ctrl + Shift + C)"
-            >
-              <Terminal className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden md:inline">From cURL</span>
-            </button>
-          )}
-
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -445,49 +419,6 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-slate-900 border border-slate-700/80 divide-slate-800/60 text-slate-100'
                   : 'bg-white border border-slate-200 divide-slate-100 text-slate-900 shadow-slate-900/10'
               }`}>
-                {/* Category 0: Quick Creation Actions */}
-                <div className="p-1 space-y-0.5">
-                  <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Quick Creation
-                  </div>
-                  {onOpenQuickNewRequest && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onOpenQuickNewRequest();
-                        setIsMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
-                        isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                      }`}
-                    >
-                      <Plus className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold leading-tight">Quick New Request</span>
-                        <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Create endpoint (Ctrl + N)</span>
-                      </div>
-                    </button>
-                  )}
-
-                  {onOpenQuickCurl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onOpenQuickCurl();
-                        setIsMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
-                        isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                      }`}
-                    >
-                      <Terminal className="w-4 h-4 text-amber-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold leading-tight">Quick Request from cURL</span>
-                        <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Paste cURL (Ctrl + Shift + C)</span>
-                      </div>
-                    </button>
-                  )}
-                </div>
                 {/* Category 1: Environment & Variables */}
                 <div className="p-1 space-y-0.5">
                   <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>

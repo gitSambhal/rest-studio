@@ -35,7 +35,7 @@ import { TabBar } from './components/TabBar';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { ToastContainer, ToastMessage } from './components/ToastContainer';
 import { ScopeContext, resolveEnvVariables } from './utils/envUtils';
-import { parseRestFileContent } from './utils/restParser';
+import { parseRestFileContent, detectAndParsePaste } from './utils/restParser';
 import { evaluateAssertions } from './utils/testUtils';
 import { runPreRequestScript, runPostRequestScript } from './utils/scriptRunner';
 import { executeHttpRequest } from './utils/httpExecutor';
@@ -209,6 +209,31 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isQuickNewRequestOpen, setIsQuickNewRequestOpen] = useState<boolean>(false);
   const [isQuickCurlOpen, setIsQuickCurlOpen] = useState<boolean>(false);
+  const [initialPasteText, setInitialPasteText] = useState<string>('');
+
+  // Global Paste Listener (Auto-detect cURL / Smart Paste anywhere when not typing in input/textarea)
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      const isInput = activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.getAttribute('contenteditable') === 'true';
+      if (isInput) return;
+
+      const pastedText = e.clipboardData?.getData('text');
+      if (!pastedText) return;
+
+      const trimmed = pastedText.trim();
+      const result = detectAndParsePaste(trimmed);
+
+      if (result && result.type !== 'unknown' && result.requests.length > 0) {
+        e.preventDefault();
+        setInitialPasteText(trimmed);
+        setIsQuickNewRequestOpen(true);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, []);
 
   // Global Keyboard Shortcuts (Ctrl+N for Quick Request, Ctrl+Shift+C / Alt+C for Quick cURL)
   useEffect(() => {
@@ -1640,7 +1665,11 @@ export default function App() {
         project={activeProject}
         activeFileId={activeFileId}
         isDarkMode={isDarkMode}
-        onClose={() => setIsQuickNewRequestOpen(false)}
+        initialPasteText={initialPasteText}
+        onClose={() => {
+          setIsQuickNewRequestOpen(false);
+          setInitialPasteText('');
+        }}
         onCreateRequest={handleCreateRequest}
         onCreateNewFileAndRequest={handleCreateNewFileAndRequest}
       />
