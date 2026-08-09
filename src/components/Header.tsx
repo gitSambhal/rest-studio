@@ -18,6 +18,8 @@ import {
   HelpCircle,
   SlidersHorizontal,
   Layers,
+  Code2,
+  Terminal,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -39,6 +41,8 @@ interface HeaderProps {
   onOpenImportExport: () => void;
   onOpenQuickHelp: () => void;
   onOpenSettings?: () => void;
+  onOpenQuickNewRequest?: () => void;
+  onOpenQuickCurl?: () => void;
   historyCount: number;
 
   isDarkMode: boolean;
@@ -61,6 +65,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenImportExport,
   onOpenQuickHelp,
   onOpenSettings,
+  onOpenQuickNewRequest,
+  onOpenQuickCurl,
   historyCount,
   isDarkMode,
   onToggleDarkMode,
@@ -157,9 +163,13 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Org Menu */}
               {isOrgOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 space-y-1 max-h-56 overflow-y-auto">
-                    <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                <div className={`absolute left-0 top-full mt-2 w-72 rounded-xl shadow-2xl z-50 divide-y p-1 space-y-1 animate-in fade-in zoom-in-95 duration-100 ${
+                  isDarkMode
+                    ? 'bg-slate-900 border border-slate-700/80 divide-slate-800/60 text-slate-100'
+                    : 'bg-white border border-slate-200 divide-slate-100 text-slate-900 shadow-slate-900/10'
+                }`}>
+                  <div className="p-1 space-y-0.5 max-h-56 overflow-y-auto">
+                    <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       Organizations
                     </div>
                     {organizations.map((org) => (
@@ -172,29 +182,33 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                           org.id === activeOrg?.id
-                            ? 'bg-purple-500/20 text-purple-300 font-semibold'
-                            : 'text-slate-300 hover:bg-slate-700/60'
+                            ? isDarkMode ? 'bg-purple-500/20 text-purple-300 font-semibold' : 'bg-purple-50 text-purple-700 font-semibold border border-purple-200'
+                            : isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100/90 hover:text-slate-900'
                         }`}
                       >
                         <div className="flex items-center space-x-2 min-w-0 pr-1">
-                          <Building2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <Building2 className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                           <span className="truncate">{org.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-700/50">
+                        <span className={`text-[10px] font-mono shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded border ${
+                          isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-700/50' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
                           {org.projects?.length || 0} proj
                         </span>
                       </button>
                     ))}
                   </div>
 
-                  <div className="p-1.5">
+                  <div className="p-1">
                     <button
                       type="button"
                       onClick={() => {
                         onOpenNewOrgModal();
                         setIsOrgOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 font-semibold flex items-center space-x-2 transition-colors cursor-pointer"
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-colors cursor-pointer ${
+                        isDarkMode ? 'text-purple-400 hover:bg-purple-500/10' : 'text-purple-600 hover:bg-purple-50'
+                      }`}
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Create New Organization</span>
@@ -228,9 +242,13 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Project Menu */}
               {isProjectOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
-                    <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                <div className={`absolute left-0 top-full mt-2 w-72 sm:w-80 rounded-xl shadow-2xl z-50 divide-y p-1 space-y-1 animate-in fade-in zoom-in-95 duration-100 ${
+                  isDarkMode
+                    ? 'bg-slate-900 border border-slate-700/80 divide-slate-800/60 text-slate-100'
+                    : 'bg-white border border-slate-200 divide-slate-100 text-slate-900 shadow-slate-900/10'
+                }`}>
+                  <div className="p-1 space-y-0.5 max-h-60 overflow-y-auto">
+                    <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       Projects in {activeOrg?.name}
                     </div>
                     {projects.map((proj) => (
@@ -243,29 +261,33 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                           proj.id === activeProject?.id
-                            ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
-                            : 'text-slate-300 hover:bg-slate-700/60'
+                            ? isDarkMode ? 'bg-emerald-500/20 text-emerald-300 font-semibold' : 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200'
+                            : isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100/90 hover:text-slate-900'
                         }`}
                       >
                         <div className="flex items-center space-x-2 min-w-0 pr-1">
-                          <FolderOpen className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <FolderOpen className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                           <span className="truncate font-medium">{proj.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-700/50">
+                        <span className={`text-[10px] font-mono shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded border ${
+                          isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-700/50' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
                           {proj.files?.length || 0} .rest
                         </span>
                       </button>
                     ))}
                   </div>
 
-                  <div className="p-1.5">
+                  <div className="p-1">
                     <button
                       type="button"
                       onClick={() => {
                         onOpenNewProjectModal();
                         setIsProjectOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 font-semibold flex items-center space-x-2 transition-colors cursor-pointer"
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-colors cursor-pointer ${
+                        isDarkMode ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-emerald-600 hover:bg-emerald-50'
+                      }`}
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Create Project in Org</span>
@@ -287,7 +309,9 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsProjectOpen(false);
                   setIsMenuOpen(false);
                 }}
-                className="flex items-center space-x-1 hover:bg-slate-800/80 px-1.5 sm:px-2 py-1 rounded-lg text-slate-200 text-xs font-medium transition-all cursor-pointer"
+                className={`flex items-center space-x-1 px-1.5 sm:px-2 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-200/80'
+                }`}
                 title={`Environment: ${activeEnv ? activeEnv.name : 'No Env'}`}
               >
                 <span
@@ -297,16 +321,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="max-w-[60px] sm:max-w-[80px] md:max-w-[110px] truncate text-xs font-mono font-semibold">
                   {activeEnv ? activeEnv.name : 'No Env'}
                 </span>
-                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isEnvOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className="w-3 h-3 opacity-60 transition-transform" />
               </button>
 
               {/* Environment Menu */}
               {isEnvOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
-                    <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <div className={`absolute left-0 top-full mt-2 w-72 rounded-xl shadow-2xl z-50 divide-y p-1 space-y-1 animate-in fade-in zoom-in-95 duration-100 ${
+                  isDarkMode
+                    ? 'bg-slate-900 border border-slate-700/80 divide-slate-800/60 text-slate-100'
+                    : 'bg-white border border-slate-200 divide-slate-100 text-slate-900 shadow-slate-900/10'
+                }`}>
+                  <div className="p-1 space-y-0.5 max-h-60 overflow-y-auto">
+                    <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       <span>Project Environment</span>
-                      <span className="text-[10px] text-emerald-400 font-mono">
+                      <span className="text-[10px] text-emerald-500 font-mono">
                         {activeProject?.environments.length} Envs
                       </span>
                     </div>
@@ -321,8 +349,8 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                           env.id === activeProject.activeEnvId
-                            ? 'bg-emerald-500/20 text-emerald-300 font-bold'
-                            : 'text-slate-300 hover:bg-slate-700/60'
+                            ? isDarkMode ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200'
+                            : isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100/90 hover:text-slate-900'
                         }`}
                       >
                         <div className="flex items-center space-x-2 min-w-0 pr-1">
@@ -332,24 +360,28 @@ export const Header: React.FC<HeaderProps> = ({
                           />
                           <span className="truncate">{env.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-normal shrink-0 whitespace-nowrap bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-700/50">
+                        <span className={`text-[10px] font-normal shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded border ${
+                          isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-700/50' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
                           {env.variables.filter((v) => v.enabled).length} vars
                         </span>
                       </button>
                     ))}
                   </div>
 
-                  <div className="p-1.5">
+                  <div className="p-1">
                     <button
                       type="button"
                       onClick={() => {
                         onOpenEnvManager();
                         setIsEnvOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-700/60 font-medium flex items-center justify-between transition-colors cursor-pointer"
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                        isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                     >
                       <div className="flex items-center space-x-2">
-                        <Settings2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <Settings2 className="w-3.5 h-3.5 text-emerald-500" />
                         <span>Manage Env Variables</span>
                       </div>
                     </button>
@@ -360,8 +392,34 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* SECTION 3: Settings & Tools Menu */}
-        <div className="flex items-center space-x-2 shrink-0 md:order-3">
+        {/* SECTION 3: Quick Action Buttons & Settings Menu */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 md:order-3">
+          {/* Quick New Request Button */}
+          {onOpenQuickNewRequest && (
+            <button
+              type="button"
+              onClick={onOpenQuickNewRequest}
+              className="flex items-center space-x-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shadow-md shadow-emerald-500/20 active:scale-95"
+              title="Quick New Request (Ctrl + N)"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <span className="hidden sm:inline">New Request</span>
+            </button>
+          )}
+
+          {/* Quick Request from cURL Button */}
+          {onOpenQuickCurl && (
+            <button
+              type="button"
+              onClick={onOpenQuickCurl}
+              className="flex items-center space-x-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs px-2 sm:px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer active:scale-95"
+              title="Quick Request from cURL (Ctrl + Shift + C)"
+            >
+              <Terminal className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">From cURL</span>
+            </button>
+          )}
+
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -382,10 +440,57 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Dropdown Menu */}
             {isMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/60 animate-in fade-in zoom-in-95 duration-100 p-1 space-y-1">
+              <div className={`absolute right-0 top-full mt-2 w-64 rounded-xl shadow-2xl z-50 divide-y p-1 space-y-1 animate-in fade-in zoom-in-95 duration-100 ${
+                isDarkMode
+                  ? 'bg-slate-900 border border-slate-700/80 divide-slate-800/60 text-slate-100'
+                  : 'bg-white border border-slate-200 divide-slate-100 text-slate-900 shadow-slate-900/10'
+              }`}>
+                {/* Category 0: Quick Creation Actions */}
+                <div className="p-1 space-y-0.5">
+                  <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Quick Creation
+                  </div>
+                  {onOpenQuickNewRequest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenQuickNewRequest();
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
+                        isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                    >
+                      <Plus className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold leading-tight">Quick New Request</span>
+                        <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Create endpoint (Ctrl + N)</span>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenQuickCurl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenQuickCurl();
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
+                        isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                    >
+                      <Terminal className="w-4 h-4 text-amber-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold leading-tight">Quick Request from cURL</span>
+                        <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Paste cURL (Ctrl + Shift + C)</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
                 {/* Category 1: Environment & Variables */}
                 <div className="p-1 space-y-0.5">
-                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     Variables & Environment
                   </div>
                   <button
@@ -394,19 +499,21 @@ export const Header: React.FC<HeaderProps> = ({
                       onOpenEnvManager();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-700/70 font-medium flex items-center space-x-2.5 transition-colors cursor-pointer"
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
+                      isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                   >
-                    <Layers className="w-4 h-4 text-amber-400 shrink-0" />
+                    <Layers className="w-4 h-4 text-amber-500 shrink-0" />
                     <div className="flex flex-col">
                       <span className="font-semibold leading-tight">Env Hierarchy Manager</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Global, Org, Project & Folder vars</span>
+                      <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Global, Org, Project & Folder vars</span>
                     </div>
                   </button>
                 </div>
 
                 {/* Category 2: Data Import & Export */}
                 <div className="p-1 space-y-0.5">
-                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     Data & Files
                   </div>
                   <button
@@ -415,19 +522,21 @@ export const Header: React.FC<HeaderProps> = ({
                       onOpenImportExport();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-700/70 font-medium flex items-center space-x-2.5 transition-colors cursor-pointer"
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
+                      isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                   >
-                    <Upload className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <Upload className="w-4 h-4 text-emerald-500 shrink-0" />
                     <div className="flex flex-col">
                       <span className="font-semibold leading-tight">Import / Export Suite</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Postman, cURL, OpenAPI & REST</span>
+                      <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Postman, cURL, OpenAPI & REST</span>
                     </div>
                   </button>
                 </div>
 
                 {/* Category 3: System & Preferences */}
                 <div className="p-1 space-y-0.5">
-                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     System & Help
                   </div>
                   
@@ -437,12 +546,14 @@ export const Header: React.FC<HeaderProps> = ({
                       if (onOpenSettings) onOpenSettings();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-700/70 font-medium flex items-center space-x-2.5 transition-colors cursor-pointer"
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
+                      isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                   >
-                    <SlidersHorizontal className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <SlidersHorizontal className="w-4 h-4 text-emerald-500 shrink-0" />
                     <div className="flex flex-col">
                       <span className="font-semibold leading-tight">Request Execution Engine</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Auto fallback, Direct Client & CORS Proxy</span>
+                      <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Auto fallback, Direct Client & CORS Proxy</span>
                     </div>
                   </button>
 
@@ -452,12 +563,14 @@ export const Header: React.FC<HeaderProps> = ({
                       onOpenQuickHelp();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-700/70 font-medium flex items-center space-x-2.5 transition-colors cursor-pointer"
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer ${
+                      isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                   >
-                    <HelpCircle className="w-4 h-4 text-sky-400 shrink-0" />
+                    <HelpCircle className="w-4 h-4 text-sky-500 shrink-0" />
                     <div className="flex flex-col">
                       <span className="font-semibold leading-tight">Quick Help & Docs</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Shortcuts, syntax & variable guide</span>
+                      <span className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Shortcuts, syntax & variable guide</span>
                     </div>
                   </button>
 
@@ -467,48 +580,56 @@ export const Header: React.FC<HeaderProps> = ({
                       onToggleDarkMode();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-slate-200 hover:bg-slate-700/70 font-medium flex items-center justify-between transition-colors cursor-pointer"
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                      isDarkMode ? 'text-slate-200 hover:bg-slate-800/80' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                   >
                     <div className="flex items-center space-x-2.5">
                       {isDarkMode ? (
                         <Sun className="w-4 h-4 text-amber-400 shrink-0" />
                       ) : (
-                        <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <Moon className="w-4 h-4 text-indigo-500 shrink-0" />
                       )}
                       <span className="font-semibold">Appearance Theme</span>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-slate-900 text-slate-300 rounded border border-slate-700">
+                    <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
+                      isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700/60' : 'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}>
                       {isDarkMode ? 'Dark' : 'Light'}
                     </span>
                   </button>
 
-                  <div className="px-2.5 py-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-700/40 mt-1">
+                  <div className={`px-2.5 py-2 flex items-center justify-between text-xs border-t mt-1 ${
+                    isDarkMode ? 'text-slate-400 border-slate-800/60' : 'text-slate-500 border-slate-100'
+                  }`}>
                     <span className="text-[11px]">Network Status</span>
                     {isOnline ? (
-                      <div className="flex items-center space-x-1.5 text-[10px] text-emerald-400 font-mono font-semibold">
+                      <div className="flex items-center space-x-1.5 text-[10px] text-emerald-500 font-mono font-semibold">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <Wifi className="w-3 h-3 text-emerald-400" />
+                        <Wifi className="w-3 h-3 text-emerald-500" />
                         <span>Online</span>
                       </div>
                     ) : (
-                      <div className="flex items-center space-x-1.5 text-[10px] text-rose-400 font-mono font-bold">
+                      <div className="flex items-center space-x-1.5 text-[10px] text-rose-500 font-mono font-bold">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                        <WifiOff className="w-3 h-3 text-rose-400" />
+                        <WifiOff className="w-3 h-3 text-rose-500" />
                         <span>Offline</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="px-2.5 py-1.5 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-700/60 mt-1 bg-slate-900/80 rounded-b-lg">
-                    <span className="text-slate-400">Developer</span>
+                  <div className={`px-2.5 py-1.5 flex items-center justify-between text-[11px] border-t mt-1 rounded-b-lg ${
+                    isDarkMode ? 'text-slate-400 border-slate-800/60 bg-slate-950/40' : 'text-slate-500 border-slate-100 bg-slate-50'
+                  }`}>
+                    <span>Developer</span>
                     <a
                       href="https://suhail.top"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 font-semibold hover:underline flex items-center space-x-1"
+                      className="text-emerald-500 hover:text-emerald-600 font-semibold hover:underline flex items-center space-x-1"
                     >
                       <span>Suhail Akhtar</span>
-                      <span className="text-[10px] text-slate-400 font-mono font-normal">suhail.top</span>
+                      <span className={`text-[10px] font-mono font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>suhail.top</span>
                     </a>
                   </div>
                 </div>

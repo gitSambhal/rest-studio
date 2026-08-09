@@ -280,7 +280,7 @@ export function highlightRestSyntax(restStr: string): React.ReactNode {
         }
 
         // Method & URL
-        const httpMatch = line.match(/^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)\s+(.+)$/i);
+        const httpMatch = line.match(/^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|QUERY)\s+(.+)$/i);
         if (httpMatch) {
           const method = httpMatch[1].toUpperCase();
           const url = httpMatch[2];
@@ -290,6 +290,7 @@ export function highlightRestSyntax(restStr: string): React.ReactNode {
           if (method === 'PUT') methodColor = 'text-amber-400';
           if (method === 'DELETE') methodColor = 'text-rose-400';
           if (method === 'PATCH') methodColor = 'text-purple-400';
+          if (method === 'QUERY') methodColor = 'text-teal-400';
 
           return (
             <React.Fragment key={idx}>

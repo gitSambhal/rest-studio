@@ -14,6 +14,8 @@ import {
   ArrowRight,
   Maximize2,
   Trash2,
+  Terminal,
+  ChevronDown,
 } from 'lucide-react';
 
 interface TabBarProps {
@@ -26,6 +28,8 @@ interface TabBarProps {
   onCloseTabsToLeft?: (tabId: string) => void;
   onCloseAllTabs?: () => void;
   onNewTab: () => void;
+  onOpenQuickNewRequest?: () => void;
+  onOpenQuickCurl?: () => void;
   splitOrientation?: 'top-bottom' | 'left-right';
   onToggleSplitOrientation?: () => void;
 }
@@ -38,6 +42,7 @@ const METHOD_COLORS: Record<HTTPMethod, string> = {
   PATCH: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
   HEAD: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30',
   OPTIONS: 'text-slate-400 bg-slate-500/10 border-slate-500/30',
+  QUERY: 'text-teal-400 bg-teal-500/10 border-teal-500/30',
 };
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -50,6 +55,8 @@ export const TabBar: React.FC<TabBarProps> = ({
   onCloseTabsToLeft,
   onCloseAllTabs,
   onNewTab,
+  onOpenQuickNewRequest,
+  onOpenQuickCurl,
   splitOrientation = 'top-bottom',
   onToggleSplitOrientation,
 }) => {
@@ -59,10 +66,18 @@ export const TabBar: React.FC<TabBarProps> = ({
     tabId: string;
   } | null>(null);
 
+  const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
+
   useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
+    const handleClickOutside = () => {
+      setContextMenu(null);
+      setIsNewMenuOpen(false);
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setContextMenu(null);
+      if (e.key === 'Escape') {
+        setContextMenu(null);
+        setIsNewMenuOpen(false);
+      }
     };
     window.addEventListener('click', handleClickOutside);
     window.addEventListener('keydown', handleKeyDown);
@@ -149,15 +164,71 @@ export const TabBar: React.FC<TabBarProps> = ({
           );
         })}
 
-        {/* New Tab Button */}
-        <button
-          type="button"
-          onClick={onNewTab}
-          className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors shrink-0 cursor-pointer ml-1"
-          title="Open New Request / Tab"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        {/* New Tab Dropdown Button */}
+        <div className="relative shrink-0 ml-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsNewMenuOpen(!isNewMenuOpen);
+            }}
+            className="flex items-center space-x-0.5 p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+            title="Open New Request or Import cURL"
+          >
+            <Plus className="w-4 h-4" />
+            <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+          </button>
+
+          {/* New Tab Dropdown Menu */}
+          {isNewMenuOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 w-52 bg-slate-900 border border-slate-700/90 rounded-xl shadow-2xl p-1 z-50 text-xs font-sans text-slate-200 space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {onOpenQuickNewRequest && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenQuickNewRequest();
+                    setIsNewMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/20 text-emerald-300 font-semibold transition-colors text-left cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Quick New Request</span>
+                </button>
+              )}
+
+              {onOpenQuickCurl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenQuickCurl();
+                    setIsNewMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 text-amber-300 font-semibold transition-colors text-left cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Quick Request from cURL</span>
+                </button>
+              )}
+
+              <div className="h-px bg-slate-800 my-1" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  onNewTab();
+                  setIsNewMenuOpen(false);
+                }}
+                className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 transition-colors text-left cursor-pointer"
+              >
+                <Compass className="w-3.5 h-3.5 text-sky-400" />
+                <span>Open Workspace Overview</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right Controls: Split Layout Toggle */}

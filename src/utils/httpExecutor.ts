@@ -11,11 +11,11 @@ export interface HttpRequestOptions {
  * Executes an HTTP request for RestStudio.
  * Supports:
  * 1. Automatic Fallback: Tries `/api/proxy` first (if backend available).
- *    If `/api/proxy` returns 404 or HTML (e.g. Netlify static hosting fallback),
+ *    If `/api/proxy` is unreachable or returns 404/HTML,
  *    it automatically falls back to Direct Client-Side Browser `fetch()`.
  * 2. Explicit Execution Modes:
  *    - 'auto': Proxy first -> Direct Client Fetch fallback
- *    - 'direct': Direct Client-Side Browser `fetch()` (full static client mode for Netlify)
+ *    - 'direct': Direct Client-Side Browser `fetch()`
  *    - 'proxy': Server proxy only
  * 3. Custom Proxy URL: Route requests via a user-defined CORS proxy if specified.
  */
@@ -45,7 +45,7 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
   const requestMode = localStorage.getItem('reststudio_request_mode') || 'auto'; // 'auto' | 'direct' | 'proxy'
   const customProxyUrl = localStorage.getItem('reststudio_custom_proxy_url') || '';
 
-  // 1. If explicit direct mode is set (ideal for Netlify/static hosting)
+  // 1. If explicit direct mode is set
   if (requestMode === 'direct') {
     return await executeDirectClientFetch(method, targetUrl, headers, body);
   }
@@ -72,7 +72,7 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
     const contentType = proxyRes.headers.get('content-type') || '';
     const responseText = await proxyRes.text();
 
-    // Detect if server returned a 404 HTML page or SPA index fallback (e.g., Netlify static host)
+    // Detect if server returned a 404 HTML page or SPA index fallback
     const isHtmlResponse = responseText.trim().toLowerCase().startsWith('<!doctype') || contentType.includes('text/html');
 
     if (!proxyRes.ok && (proxyRes.status === 404 || isHtmlResponse)) {
@@ -84,7 +84,7 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
           headers: {},
           body: JSON.stringify(
             {
-              error: '/api/proxy is not available on this static deployment (e.g. Netlify).',
+              error: '/api/proxy is not available on this endpoint.',
               recommendation: 'Switch request mode to "Direct Client Fetch" or "Auto Fallback" in Settings.',
             },
             null,

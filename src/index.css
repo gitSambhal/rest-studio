@@ -4,15 +4,24 @@
   color-scheme: light;
 }
 
-/* 1. Base Canvas and Page Backgrounds */
+/* 1. Base Canvas and Page Backgrounds - Modern Subtle Gradient */
+body {
+  background: radial-gradient(ellipse at 80% 0%, rgba(16, 185, 129, 0.07), transparent 50%),
+              radial-gradient(ellipse at 10% 90%, rgba(56, 189, 248, 0.07), transparent 50%),
+              linear-gradient(135deg, #090d16 0%, #0f172a 60%, #0d1322 100%);
+  color: #f8fafc;
+}
+
 .light-theme,
 .light-theme body,
 .light-theme #root {
-  background-color: #f8fafc !important; /* slate-50 */
+  background: radial-gradient(ellipse at 80% 0%, rgba(16, 185, 129, 0.06), transparent 50%),
+              radial-gradient(ellipse at 10% 90%, rgba(99, 102, 241, 0.06), transparent 50%),
+              linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%) !important;
   color: #0f172a !important; /* slate-900 */
 }
 
-/* 2. Container Panels & Surface Elements in Light Mode */
+/* 2. Container Panels & Surface Elements in Light Mode - Fresh White & Slate Accent */
 .light-theme [class~="bg-slate-950"],
 .light-theme [class*="bg-slate-950/"],
 .light-theme [class~="bg-slate-900"],
@@ -25,24 +34,24 @@
 /* Sub-panels, card headers, table headers, toolbar containers */
 .light-theme [class~="bg-slate-800"],
 .light-theme [class*="bg-slate-800/"] {
-  background-color: #f1f5f9 !important; /* slate-100 */
+  background-color: #f8fafc !important; /* slate-50 clean white tint */
 }
 
 .light-theme [class~="bg-slate-700"],
 .light-theme [class*="bg-slate-700/"] {
-  background-color: #e2e8f0 !important; /* slate-200 */
+  background-color: #f1f5f9 !important; /* slate-100 */
 }
 
 /* Hover States in Light Mode */
 .light-theme [class*="hover:bg-slate-900"]:hover,
 .light-theme [class*="hover:bg-slate-800"]:hover,
 .light-theme [class*="hover:bg-slate-700"]:hover {
-  background-color: #e2e8f0 !important;
+  background-color: #f1f5f9 !important;
 }
 
 .light-theme [class*="hover:bg-slate-800/60"]:hover,
 .light-theme [class*="hover:bg-slate-700/60"]:hover {
-  background-color: #e2e8f0 !important;
+  background-color: #f1f5f9 !important;
 }
 
 /* 3. Crisp High Contrast Borders */
@@ -54,12 +63,12 @@
 .light-theme [class*="border-slate-850/"],
 .light-theme [class~="border-slate-800"],
 .light-theme [class*="border-slate-800/"] {
-  border-color: #cbd5e1 !important; /* slate-300 */
+  border-color: #e2e8f0 !important; /* slate-200 clean light border */
 }
 
 .light-theme [class~="border-slate-700"],
 .light-theme [class*="border-slate-700/"] {
-  border-color: #94a3b8 !important; /* slate-400 */
+  border-color: #cbd5e1 !important; /* slate-300 */
 }
 
 .light-theme [class*="divide-slate-800"] > * + *,
@@ -193,7 +202,65 @@
   background-color: #ccfbf1 !important;
 }
 
-/* 6. Form Inputs, Selects, and Textareas */
+/* 7. Popups, Dropdowns, Flyout Menus, and Modal Dialogs in Light Mode */
+.light-theme .absolute.z-50,
+.light-theme [role="dialog"],
+.light-theme .fixed.z-50 > div.bg-slate-900,
+.light-theme .fixed.z-50 > div.bg-slate-950 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Modal Backdrop Overlays in Light Mode */
+.light-theme .fixed.inset-0.z-50 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Dropdown / Popover inner items & sections */
+.light-theme .absolute.z-50 .uppercase,
+.light-theme .fixed.z-50 .uppercase {
+  color: #475569 !important; /* slate-600 font-bold uppercase */
+}
+
+/* Dropdown menu items hover state in Light Mode */
+.light-theme .absolute.z-50 button:not([class*="bg-"]):hover,
+.light-theme .absolute.z-50 button[class*="hover:bg-"]:hover {
+  background-color: #f1f5f9 !important; /* slate-100 clean hover */
+  color: #0f172a !important;
+}
+
+/* Inner footers & sub-card panels inside popups/modals */
+.light-theme .absolute.z-50 [class*="bg-slate-950"],
+.light-theme .absolute.z-50 [class*="bg-slate-900/"],
+.light-theme .fixed.z-50 [class*="bg-slate-950"],
+.light-theme .fixed.z-50 [class*="bg-slate-900/"],
+.light-theme .fixed.z-50 [class*="bg-slate-900\/"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Modal Option Cards & Radio Items in Light Mode */
+.light-theme .fixed.z-50 label[class*="border-slate-800"],
+.light-theme .fixed.z-50 div[class*="border-slate-800"] {
+  border-color: #cbd5e1 !important;
+}
+
+.light-theme .fixed.z-50 label[class*="bg-slate-950"],
+.light-theme .fixed.z-50 div[class*="bg-slate-950"] {
+  background-color: #f8fafc !important;
+}
+
+/* Active / Selected items in Light Mode */
+.light-theme [class*="bg-emerald-500/10"],
+.light-theme [class*="bg-emerald-500/20"] {
+  background-color: #ecfdf5 !important;
+  border-color: #10b981 !important;
+}
+
+/* Form Inputs, Selects, and Textareas in Light Mode */
 .light-theme input,
 .light-theme textarea,
 .light-theme select {

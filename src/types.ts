@@ -1,4 +1,4 @@
-export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS' | 'QUERY';
 
 export type EnvVariableScope = 'global' | 'organization' | 'project' | 'folder' | 'file';
 

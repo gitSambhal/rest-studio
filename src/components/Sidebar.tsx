@@ -18,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown,
   FolderInput,
+  Terminal,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -39,6 +40,8 @@ interface SidebarProps {
   onDuplicateRequest: (fileId: string, requestId: string) => void;
   onDeleteRequest: (fileId: string, requestId: string) => void;
   onMoveRequestOrder: (fileId: string, requestId: string, direction: 'up' | 'down') => void;
+  onOpenQuickNewRequest?: () => void;
+  onOpenQuickCurl?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -60,6 +63,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDuplicateRequest,
   onDeleteRequest,
   onMoveRequestOrder,
+  onOpenQuickNewRequest,
+  onOpenQuickCurl,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
@@ -104,6 +109,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return 'text-rose-400 bg-rose-500/10 border-rose-500/30';
       case 'PATCH':
         return 'text-purple-400 bg-purple-500/10 border-purple-500/30';
+      case 'QUERY':
+        return 'text-teal-400 bg-teal-500/10 border-teal-500/30';
+      case 'HEAD':
+        return 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30';
       default:
         return 'text-slate-400 bg-slate-500/10 border-slate-500/30';
     }
@@ -119,6 +128,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
 
           <div className="flex items-center space-x-1">
+            {onOpenQuickNewRequest && (
+              <button
+                type="button"
+                onClick={onOpenQuickNewRequest}
+                title="Quick New Request (Ctrl + N)"
+                className="p-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 rounded transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            )}
+
+            {onOpenQuickCurl && (
+              <button
+                type="button"
+                onClick={onOpenQuickCurl}
+                title="Quick Request from cURL (Ctrl + Shift + C)"
+                className="p-1 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 rounded transition-colors cursor-pointer"
+              >
+                <Terminal className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {

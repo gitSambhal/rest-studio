@@ -29,6 +29,8 @@ import { ImportExportModal } from './components/ImportExportModal';
 import { QuickHelpModal } from './components/QuickHelpModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PromptModal } from './components/PromptModal';
+import { QuickNewRequestModal } from './components/QuickNewRequestModal';
+import { QuickCurlModal } from './components/QuickCurlModal';
 import { TabBar } from './components/TabBar';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { ToastContainer, ToastMessage } from './components/ToastContainer';
@@ -205,6 +207,30 @@ export default function App() {
   const [isImportExportOpen, setIsImportExportOpen] = useState<boolean>(false);
   const [isQuickHelpOpen, setIsQuickHelpOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isQuickNewRequestOpen, setIsQuickNewRequestOpen] = useState<boolean>(false);
+  const [isQuickCurlOpen, setIsQuickCurlOpen] = useState<boolean>(false);
+
+  // Global Keyboard Shortcuts (Ctrl+N for Quick Request, Ctrl+Shift+C / Alt+C for Quick cURL)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if focus is inside an input/textarea and user presses N
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      const isInput = activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.getAttribute('contenteditable') === 'true';
+
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setIsQuickNewRequestOpen(true);
+      } else if (
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'c') ||
+        (e.altKey && e.key.toLowerCase() === 'c')
+      ) {
+        e.preventDefault();
+        setIsQuickCurlOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Execution State
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
@@ -373,7 +399,7 @@ export default function App() {
   const handleExecuteRequest = async (req: RestRequest): Promise<ExecutionResponse> => {
     setIsExecuting(true);
 
-    // 1. Resolve URL with 5-tier env variables
+    // 1. Resolve URL with 3-level env variables
     const urlResolution = resolveEnvVariables(req.url, scopeCtx);
     let targetUrl = urlResolution.resolved;
 
@@ -956,13 +982,13 @@ export default function App() {
   };
 
   // REQUEST CRUD
-  const handleCreateRequest = (fileId: string, method: HTTPMethod, name: string) => {
+  const handleCreateRequest = (fileId: string, method: HTTPMethod, name: string, url?: string) => {
     const targetFile = (activeProject.files || []).find((f) => f.id === fileId);
     const newReq: RestRequest = {
       id: 'req_' + Math.random().toString(36).substring(2, 9),
-      name,
+      name: name || `${method} Endpoint`,
       method,
-      url: '{{baseUrl}}/endpoint',
+      url: url || '{{baseUrl}}/endpoint',
       headers: [],
       queryParams: [],
       body: { mode: 'none', rawText: '' },
@@ -970,11 +996,65 @@ export default function App() {
     };
 
     const updatedFiles = activeProject.files.map((f) =>
-      f.id === fileId ? { ...f, requests: [...f.requests, newReq], updatedAt: Date.now() } : f
+      f.id === fileId ? { ...f, requests: [...(f.requests || []), newReq], updatedAt: Date.now() } : f
     );
     updateProjectFiles(updatedFiles);
     handleOpenRequestInTab(fileId, newReq.id);
-    showToast('success', 'Endpoint Added', `Added "${name}" to ${targetFile?.name || 'file'}.`);
+    showToast('success', 'Endpoint Created', `Added "${newReq.name}" to ${targetFile?.name || 'file'}.`);
+  };
+
+  const handleCreateNewFileAndRequest = (fileName: string, method: HTTPMethod, name: string, url?: string) => {
+    if (!activeProject) return;
+    const newReq: RestRequest = {
+      id: 'req_' + Math.random().toString(36).substring(2, 9),
+      name: name || `${method} Endpoint`,
+      method,
+      url: url || '{{baseUrl}}/endpoint',
+      headers: [],
+      queryParams: [],
+      body: { mode: 'none', rawText: '' },
+      auth: { type: 'none', bearerToken: '' },
+    };
+
+    const newFile: RestFile = {
+      id: 'file_' + Math.random().toString(36).substring(2, 9),
+      name: fileName,
+      rawContent: `### ${newReq.name}\n${method} ${url || '{{baseUrl}}/endpoint'}\n`,
+      requests: [newReq],
+      updatedAt: Date.now(),
+    };
+
+    updateProjectFiles([...(activeProject.files || []), newFile]);
+    handleOpenRequestInTab(newFile.id, newReq.id);
+    showToast('success', 'File & Request Created', `Created "${fileName}" with endpoint "${newReq.name}".`);
+  };
+
+  const handleImportQuickCurl = (req: RestRequest, targetFileId?: string) => {
+    if (!activeProject) return;
+
+    let targetFile = (activeProject.files || []).find((f) => f.id === targetFileId) || activeFile || activeProject.files?.[0];
+
+    if (!targetFile) {
+      // Create a default file if project has no files
+      const newFile: RestFile = {
+        id: 'file_' + Math.random().toString(36).substring(2, 9),
+        name: 'curl_requests.rest',
+        rawContent: '',
+        requests: [req],
+        updatedAt: Date.now(),
+      };
+      updateProjectFiles([newFile]);
+      handleOpenRequestInTab(newFile.id, req.id);
+      showToast('success', 'cURL Endpoint Imported', `Imported "${req.name}" into new curl_requests.rest file.`);
+      return;
+    }
+
+    const updatedFiles = (activeProject.files || []).map((f) =>
+      f.id === targetFile!.id ? { ...f, requests: [...(f.requests || []), req], updatedAt: Date.now() } : f
+    );
+    updateProjectFiles(updatedFiles);
+    handleOpenRequestInTab(targetFile.id, req.id);
+    showToast('success', 'cURL Endpoint Imported', `Imported "${req.name}" into ${targetFile.name}.`);
   };
 
   const handleRenameRequest = (fileId: string, requestId: string, newName: string) => {
@@ -1224,7 +1304,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 font-sans overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-950 via-[#0b1220] to-[#0f172a] text-slate-100 font-sans overflow-hidden select-none">
       {/* Top Header */}
       <Header
         organizations={organizations}
@@ -1255,6 +1335,8 @@ export default function App() {
         onOpenImportExport={() => setIsImportExportOpen(true)}
         onOpenQuickHelp={() => setIsQuickHelpOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenQuickNewRequest={() => setIsQuickNewRequestOpen(true)}
+        onOpenQuickCurl={() => setIsQuickCurlOpen(true)}
         historyCount={history.length}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
@@ -1278,6 +1360,8 @@ export default function App() {
         onCloseTabsToLeft={handleCloseTabsToLeft}
         onCloseAllTabs={handleCloseAllTabs}
         onNewTab={handleCreateNewTabWithDummy}
+        onOpenQuickNewRequest={() => setIsQuickNewRequestOpen(true)}
+        onOpenQuickCurl={() => setIsQuickCurlOpen(true)}
         splitOrientation={splitOrientation}
         onToggleSplitOrientation={() =>
           setSplitOrientation(splitOrientation === 'top-bottom' ? 'left-right' : 'top-bottom')
@@ -1310,10 +1394,12 @@ export default function App() {
           onDuplicateRequest={handleDuplicateRequest}
           onDeleteRequest={handleDeleteRequest}
           onMoveRequestOrder={handleMoveRequestOrder}
+          onOpenQuickNewRequest={() => setIsQuickNewRequestOpen(true)}
+          onOpenQuickCurl={() => setIsQuickCurlOpen(true)}
         />
 
         {/* Central Workspace Canvas */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-slate-950">
+        <main className="flex-1 flex flex-col overflow-hidden bg-transparent">
           {/* If current activeTabObj is onboarding, show OnboardingScreen */}
           {activeTabObj?.type === 'onboarding' ? (
             <OnboardingScreen
@@ -1512,6 +1598,7 @@ export default function App() {
       {isImportExportOpen && (
         <ImportExportModal
           project={activeProject}
+          isDarkMode={isDarkMode}
           onClose={() => setIsImportExportOpen(false)}
           onImportRestFile={(fileName, content) => {
             if (!activeProject) return;
@@ -1546,6 +1633,27 @@ export default function App() {
       {isQuickHelpOpen && (
         <QuickHelpModal onClose={() => setIsQuickHelpOpen(false)} />
       )}
+
+      {/* Quick New Request Modal */}
+      <QuickNewRequestModal
+        isOpen={isQuickNewRequestOpen}
+        project={activeProject}
+        activeFileId={activeFileId}
+        isDarkMode={isDarkMode}
+        onClose={() => setIsQuickNewRequestOpen(false)}
+        onCreateRequest={handleCreateRequest}
+        onCreateNewFileAndRequest={handleCreateNewFileAndRequest}
+      />
+
+      {/* Quick Request from cURL Modal */}
+      <QuickCurlModal
+        isOpen={isQuickCurlOpen}
+        project={activeProject}
+        activeFileId={activeFileId}
+        isDarkMode={isDarkMode}
+        onClose={() => setIsQuickCurlOpen(false)}
+        onImportCurl={handleImportQuickCurl}
+      />
 
       {/* Settings Modal */}
       <SettingsModal

@@ -78,6 +78,10 @@ export const RequestEditor: React.FC<RequestEditorProps> = ({
         return 'text-rose-400 bg-rose-500/20 border-rose-500/40';
       case 'PATCH':
         return 'text-purple-400 bg-purple-500/20 border-purple-500/40';
+      case 'QUERY':
+        return 'text-teal-400 bg-teal-500/20 border-teal-500/40';
+      case 'HEAD':
+        return 'text-indigo-400 bg-indigo-500/20 border-indigo-500/40';
       default:
         return 'text-slate-400 bg-slate-500/20 border-slate-500/40';
     }
@@ -388,6 +392,7 @@ export const RequestEditor: React.FC<RequestEditorProps> = ({
             <option value="PATCH" className="bg-slate-900 text-purple-400">PATCH</option>
             <option value="HEAD" className="bg-slate-900 text-slate-400">HEAD</option>
             <option value="OPTIONS" className="bg-slate-900 text-slate-400">OPTIONS</option>
+            <option value="QUERY" className="bg-slate-900 text-teal-400">QUERY</option>
           </select>
 
           {/* Autocomplete URL Input */}
