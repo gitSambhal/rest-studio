@@ -155,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Org Menu */}
               {isOrgOpen && (
-                <div className="absolute left-0 top-full mt-2 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="p-2 space-y-1 max-h-56 overflow-y-auto">
                     <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                       Organizations
@@ -168,17 +168,17 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectOrg(org);
                           setIsOrgOpen(false);
                         }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                           org.id === activeOrg?.id
                             ? 'bg-purple-500/20 text-purple-300 font-semibold'
                             : 'text-slate-300 hover:bg-slate-700/60'
                         }`}
                       >
-                        <div className="flex items-center space-x-2 truncate">
+                        <div className="flex items-center space-x-2 min-w-0 pr-1">
                           <Building2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                           <span className="truncate">{org.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-700/50">
                           {org.projects?.length || 0} proj
                         </span>
                       </button>
@@ -226,8 +226,8 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Project Menu */}
               {isProjectOpen && (
-                <div className="absolute left-0 top-full mt-2 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 space-y-1 max-h-56 overflow-y-auto">
+                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
                     <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                       Projects in {activeOrg?.name}
                     </div>
@@ -239,14 +239,19 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectProject(proj);
                           setIsProjectOpen(false);
                         }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                           proj.id === activeProject?.id
                             ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
                             : 'text-slate-300 hover:bg-slate-700/60'
                         }`}
                       >
-                        <span className="truncate">{proj.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{proj.files?.length || 0} .rest</span>
+                        <div className="flex items-center space-x-2 min-w-0 pr-1">
+                          <FolderOpen className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="truncate font-medium">{proj.name}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-700/50">
+                          {proj.files?.length || 0} .rest
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -295,8 +300,8 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Environment Menu */}
               {isEnvOpen && (
-                <div className="absolute left-0 top-full mt-2 w-60 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 space-y-1 max-h-56 overflow-y-auto">
+                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-700/50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
                     <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                       <span>Project Environment</span>
                       <span className="text-[10px] text-emerald-400 font-mono">
@@ -312,20 +317,20 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectEnvironment(env.id);
                           setIsEnvOpen(false);
                         }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between transition-colors cursor-pointer ${
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                           env.id === activeProject.activeEnvId
                             ? 'bg-emerald-500/20 text-emerald-300 font-bold'
                             : 'text-slate-300 hover:bg-slate-700/60'
                         }`}
                       >
-                        <div className="flex items-center space-x-2 truncate">
+                        <div className="flex items-center space-x-2 min-w-0 pr-1">
                           <span
                             className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: env.color || '#10b981' }}
                           />
                           <span className="truncate">{env.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-normal shrink-0">
+                        <span className="text-[10px] text-slate-400 font-normal shrink-0 whitespace-nowrap bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-700/50">
                           {env.variables.filter((v) => v.enabled).length} vars
                         </span>
                       </button>
