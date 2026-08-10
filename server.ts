@@ -14,54 +14,6 @@ async function startServer() {
     res.json({ status: 'ok', service: 'RestStudio API Proxy' });
   });
 
-  // Built-in Mock Endpoints for testing localhost calls
-  app.get('/api/v1/users', (req, res) => {
-    res.json({
-      success: true,
-      data: [
-        { id: 1, name: 'Alice Johnson', email: 'alice@example.com', role: 'admin' },
-        { id: 2, name: 'Bob Smith', email: 'bob@example.com', role: 'developer' },
-        { id: 3, name: 'Carol Williams', email: 'carol@example.com', role: 'viewer' },
-      ],
-      total: 3,
-      page: 1,
-    });
-  });
-
-  app.get('/api/v1/posts', (req, res) => {
-    res.json({
-      success: true,
-      data: [
-        { id: 101, title: 'Getting Started with RestStudio', author: 'Alice', views: 1250 },
-        { id: 102, title: 'Building RESTful APIs with Express', author: 'Bob', views: 890 },
-      ],
-    });
-  });
-
-  app.post('/api/v1/auth/login', (req, res) => {
-    const { username, email, password } = req.body || {};
-    res.json({
-      success: true,
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
-      tokenType: 'Bearer',
-      user: {
-        id: 'usr_89213',
-        name: username || 'Demo User',
-        email: email || 'user@example.com',
-      },
-    });
-  });
-
-  app.all('/api/v1/echo', (req, res) => {
-    res.json({
-      method: req.method,
-      query: req.query,
-      headers: req.headers,
-      body: req.body,
-      timestamp: new Date().toISOString(),
-    });
-  });
-
   // REST Request Proxy Endpoint
   app.post('/api/proxy', async (req, res) => {
     const { method = 'GET', url, headers = {}, body } = req.body;
@@ -75,7 +27,7 @@ async function startServer() {
     let targetUrl = url.trim();
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
       if (targetUrl.startsWith('/')) {
-        targetUrl = 'http://localhost:3000' + targetUrl;
+        targetUrl = 'http://127.0.0.1:3000' + targetUrl;
       } else if (
         targetUrl.startsWith('localhost') ||
         targetUrl.startsWith('127.0.0.1') ||
@@ -86,6 +38,11 @@ async function startServer() {
         targetUrl = 'https://' + targetUrl;
       }
     }
+
+    // Convert localhost or 0.0.0.0 to 127.0.0.1 to avoid Node 18+ IPv6 (::1) lookup connection refused errors
+    targetUrl = targetUrl
+      .replace(/^http:\/\/localhost(?=[:\/]|$)/i, 'http://127.0.0.1')
+      .replace(/^http:\/\/0\.0\.0\.0(?=[:\/]|$)/i, 'http://127.0.0.1');
 
     // Prevent recursive proxy loops
     if (targetUrl.includes('/api/proxy')) {

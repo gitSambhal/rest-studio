@@ -39,7 +39,7 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
   let targetUrl = url.trim();
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
     if (targetUrl.startsWith('/')) {
-      targetUrl = 'http://localhost:3000' + targetUrl;
+      targetUrl = 'http://127.0.0.1:3000' + targetUrl;
     } else if (
       targetUrl.startsWith('localhost') ||
       targetUrl.startsWith('127.0.0.1') ||
@@ -93,38 +93,11 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
     const contentType = proxyRes.headers.get('content-type') || '';
     const responseText = await proxyRes.text();
 
-    // Detect if server returned a 404 HTML page or SPA index fallback
-    const isHtmlResponse = responseText.trim().toLowerCase().startsWith('<!doctype') || contentType.includes('text/html');
+    // Detect if server returned non-200, 404 HTML page or SPA index fallback
+    const isHtmlResponse = responseText.trim().toLowerCase().startsWith('<!doctype') || responseText.trim().toLowerCase().startsWith('<html') || contentType.includes('text/html');
 
-    if (!proxyRes.ok && (proxyRes.status === 404 || isHtmlResponse)) {
-      if (requestMode === 'proxy') {
-        return {
-          status: 404,
-          statusText: 'Proxy Endpoint Not Found (404)',
-          headers: {},
-          body: JSON.stringify(
-            {
-              error: '/api/proxy is not available on this endpoint.',
-              recommendation: 'Switch request mode to "Direct Client Fetch" or "Auto Fallback" in Settings.',
-            },
-            null,
-            2
-          ),
-          size: 0,
-          duration: Math.round(performance.now() - startTime),
-          timestamp: Date.now(),
-          ok: false,
-          error: 'Proxy endpoint 404',
-        };
-      }
-
-      // Auto mode: Fallback to direct client fetch seamlessly
-      console.warn('[RestStudio] /api/proxy not available (static host detected). Falling back to direct client fetch.');
-      return await executeDirectClientFetch(method, targetUrl, headers, body);
-    }
-
-    if (isHtmlResponse) {
-      console.warn('[RestStudio] /api/proxy returned HTML instead of JSON. Falling back to direct client fetch.');
+    if (!proxyRes.ok || isHtmlResponse) {
+      console.warn('[RestStudio] /api/proxy error or HTML response. Auto falling back to direct client fetch.');
       return await executeDirectClientFetch(method, targetUrl, headers, body);
     }
 
@@ -132,60 +105,28 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
     try {
       const responseData: ExecutionResponse = JSON.parse(responseText);
 
-      // If the proxy or backend returned an actual HTTP response (status > 0, e.g. 200, 400, 404, 500), return it directly
+      // If the proxy reached target server and got a real HTTP response status (> 0, e.g. 200, 400, 404, 500), return it
       if (responseData.status > 0) {
         return responseData;
       }
 
-      // If status === 0 (network connection failure / refused) for a localhost URL, attempt direct client fetch as second chance
-      if (isLocalhostUrl) {
-        const directClientRes = await executeDirectClientFetch(method, targetUrl, headers, body);
-        if (directClientRes.ok || directClientRes.status > 0) {
-          return directClientRes;
-        }
+      // If responseData.status === 0 (proxy could not connect to target server e.g. ECONNREFUSED)
+      console.warn('[RestStudio] Proxy returned status 0 (connection error). Auto falling back to direct client fetch.');
+      const directClientRes = await executeDirectClientFetch(method, targetUrl, headers, body);
 
-        return {
-          ...responseData,
-          statusText: 'Localhost Connection Refused',
-          body: JSON.stringify(
-            {
-              error: `Unable to connect to local server at ${targetUrl}`,
-              cause: 'Connection refused or target service is not running on localhost.',
-              howToFix: [
-                '1. Verify your local API server is running on localhost.',
-                '2. Test built-in endpoints: Try `http://localhost:3000/api/v1/users` or `http://localhost:3000/api/health`.',
-                '3. Ensure CORS headers are enabled if making browser-direct calls.',
-                '4. You can also test external mock services like jsonplaceholder.typicode.com or httpbin.org.'
-              ],
-              originalError: responseData.error || responseData.body,
-            },
-            null,
-            2
-          ),
-        };
+      // If direct client fetch succeeded or got an actual response status > 0, return it
+      if (directClientRes.status > 0) {
+        return directClientRes;
       }
 
-      return responseData;
+      // If direct client fetch also returned status 0, return directClientRes
+      return directClientRes;
     } catch (jsonParseErr) {
       console.warn('[RestStudio] Failed to parse proxy response as JSON. Falling back to direct client fetch.', jsonParseErr);
       return await executeDirectClientFetch(method, targetUrl, headers, body);
     }
   } catch (err: any) {
-    if (requestMode === 'proxy') {
-      return {
-        status: 0,
-        statusText: 'Proxy Request Failed',
-        headers: {},
-        body: JSON.stringify({ error: 'Failed to connect to proxy server', details: err.message }, null, 2),
-        size: 0,
-        duration: 0,
-        timestamp: Date.now(),
-        ok: false,
-        error: err.message,
-      };
-    }
-
-    // Fall back to direct client fetch
+    // Server proxy fetch network/connection exception -> fall back to direct client fetch
     console.warn('[RestStudio] Server proxy fetch error, falling back to direct client fetch:', err?.message);
     return await executeDirectClientFetch(method, targetUrl, headers, body);
   }
