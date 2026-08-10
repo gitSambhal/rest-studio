@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ExecutionResponse, TestAssertion, SavedResponseItem } from '../types';
 import { highlightJson, highlightJs } from '../utils/syntaxHighlighter';
+import { requestLocalNetworkPermission } from '../utils/localhostBridge';
 import {
   CheckCircle2,
   AlertCircle,
@@ -18,7 +19,10 @@ import {
   BookmarkPlus,
   X,
   XCircle,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
+
 
 interface ResponseViewerProps {
   response: ExecutionResponse | null;
@@ -43,6 +47,21 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [snapshotTitleInput, setSnapshotTitleInput] = useState('');
   const [showSaveToast, setShowSaveToast] = useState(false);
+  const [permissionMsg, setPermissionMsg] = useState<string | null>(null);
+  const [isRequestingPerm, setIsRequestingPerm] = useState(false);
+
+  const handleRequestPermission = async () => {
+    setIsRequestingPerm(true);
+    setPermissionMsg('Triggering Chrome Local Network Access permission prompt...');
+    const res = await requestLocalNetworkPermission();
+    setIsRequestingPerm(false);
+    if (res.granted) {
+      setPermissionMsg('✅ Local Network Access permission granted! Re-send your request to verify.');
+    } else {
+      setPermissionMsg(`⚠️ ${res.message}`);
+    }
+  };
+
 
   // Compute active response to render (either selected snapshot or live response)
   const activeSnapshot = savedResponses.find((s) => s.id === selectedSnapshotId);
@@ -370,12 +389,44 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
       {/* Tab Content Body */}
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'pretty' && (
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {displayResponse.status === 0 && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-2">
+                    <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-xs text-amber-300">Local Network Access & Private Network Policy</h4>
+                      <p className="text-[11px] text-slate-300">
+                        Chrome requires user consent when hosted HTTPS web applications access local servers on <code>localhost</code> or private IPs.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRequestPermission}
+                    disabled={isRequestingPerm}
+                    className="shrink-0 flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-md disabled:opacity-50"
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>{isRequestingPerm ? 'Triggering...' : 'Request Local Network Permission'}</span>
+                  </button>
+                </div>
+
+                {permissionMsg && (
+                  <div className="p-2 bg-slate-900/90 border border-slate-800 rounded-lg text-xs font-mono text-emerald-300">
+                    {permissionMsg}
+                  </div>
+                )}
+              </div>
+            )}
+
             <pre className="p-3 bg-slate-900/80 border border-slate-800/80 rounded-xl font-mono text-xs text-slate-200 overflow-x-auto leading-relaxed select-text">
               <code>{isJson ? highlightJson(formattedBody) : formattedBody}</code>
             </pre>
           </div>
         )}
+
 
         {activeTab === 'raw' && (
           <textarea

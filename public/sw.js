@@ -90,3 +90,66 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// 4. Localhost Proxy Bridge Message Handler
+self.addEventListener('message', async (event) => {
+  if (event.data && event.data.type === 'EXECUTE_LOCALHOST_FETCH') {
+    const { id, method, url, headers, body } = event.data.payload;
+    const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(url);
+    const isPrivateIpUrl = /^https?:\/\/(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/i.test(url);
+
+    try {
+      const fetchOptions = {
+        method: (method || 'GET').toUpperCase(),
+        headers: { ...headers },
+      };
+
+      if (isLocalhostUrl) {
+        fetchOptions.targetAddressSpace = 'local';
+      } else if (isPrivateIpUrl) {
+        fetchOptions.targetAddressSpace = 'private';
+      }
+
+      if (body && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(fetchOptions.method)) {
+        fetchOptions.body = typeof body === 'object' ? JSON.stringify(body) : String(body);
+      }
+
+      const startTime = performance.now();
+      const res = await fetch(url, fetchOptions);
+      const endTime = performance.now();
+      const text = await res.text();
+
+      const resHeaders = {};
+      res.headers.forEach((v, k) => {
+        resHeaders[k] = v;
+      });
+
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({
+          success: true,
+          id,
+          response: {
+            status: res.status,
+            statusText: res.statusText || 'OK',
+            headers: resHeaders,
+            body: text,
+            size: new Blob([text]).size,
+            duration: Math.round(endTime - startTime),
+            timestamp: Date.now(),
+            ok: res.ok,
+            contentType: res.headers.get('content-type') || 'text/plain',
+          },
+        });
+      }
+    } catch (err) {
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({
+          success: false,
+          id,
+          error: err.message || 'Service Worker Localhost fetch failed',
+        });
+      }
+    }
+  }
+});
+

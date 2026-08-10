@@ -1,4 +1,5 @@
 import { ExecutionResponse } from '../types';
+import { fetchViaServiceWorkerBridge, requestLocalNetworkPermission } from './localhostBridge';
 
 export interface HttpRequestOptions {
   method: string;
@@ -146,27 +147,26 @@ export async function executeDirectClientFetch(
   const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(targetUrl);
   const isPrivateIpUrl = /^https?:\/\/(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/i.test(targetUrl);
 
+  const fetchOptions: any = {
+    method: method.toUpperCase(),
+    headers: { ...headers },
+  };
+
+  if (isLocalhostUrl) {
+    fetchOptions.targetAddressSpace = 'local';
+  } else if (isPrivateIpUrl) {
+    fetchOptions.targetAddressSpace = 'private';
+  }
+
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
+    if (typeof body === 'object') {
+      fetchOptions.body = JSON.stringify(body);
+    } else {
+      fetchOptions.body = String(body);
+    }
+  }
+
   try {
-    // Specify targetAddressSpace for Chrome's Private Network Access / Local Network Access permission
-    const fetchOptions: any = {
-      method: method.toUpperCase(),
-      headers: { ...headers },
-    };
-
-    if (isLocalhostUrl) {
-      fetchOptions.targetAddressSpace = 'local';
-    } else if (isPrivateIpUrl) {
-      fetchOptions.targetAddressSpace = 'private';
-    }
-
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
-      if (typeof body === 'object') {
-        fetchOptions.body = JSON.stringify(body);
-      } else {
-        fetchOptions.body = String(body);
-      }
-    }
-
     const res = await fetch(targetUrl, fetchOptions);
     const endTime = performance.now();
     const duration = Math.round(endTime - startTime);
@@ -195,6 +195,45 @@ export async function executeDirectClientFetch(
     const duration = Math.round(endTime - startTime);
 
     if (isLocalhostUrl || isPrivateIpUrl) {
+      // 1. Attempt Service Worker Proxy Bridge automatically as primary fallback
+      try {
+        const swBridgeResult = await fetchViaServiceWorkerBridge(method, targetUrl, headers, body);
+        if (swBridgeResult.success && swBridgeResult.response) {
+          console.log('[RestStudio] Service Worker Localhost Proxy Bridge succeeded automatically!');
+          return swBridgeResult.response;
+        }
+      } catch (swErr) {
+        console.warn('[RestStudio] SW Proxy Bridge automatic attempt failed:', swErr);
+      }
+
+      // 2. Automatically trigger Chrome's Local Network Access preflight
+      try {
+        await requestLocalNetworkPermission(targetUrl);
+        // Retry direct fetch after preflight permission trigger
+        const retryRes = await fetch(targetUrl, fetchOptions);
+        const retryEndTime = performance.now();
+        const retryText = await retryRes.text();
+        const retryResHeaders: Record<string, string> = {};
+        retryRes.headers.forEach((val, key) => {
+          retryResHeaders[key] = val;
+        });
+
+        console.log('[RestStudio] Automated Local Network Access retry succeeded!');
+        return {
+          status: retryRes.status,
+          statusText: retryRes.statusText || 'OK',
+          headers: retryResHeaders,
+          body: retryText,
+          size: new Blob([retryText]).size,
+          duration: Math.round(retryEndTime - startTime),
+          timestamp: Date.now(),
+          ok: retryRes.ok,
+          contentType: retryRes.headers.get('content-type') || 'text/plain',
+        };
+      } catch (retryErr) {
+        console.warn('[RestStudio] Automated retry after preflight failed:', retryErr);
+      }
+
       return {
         status: 0,
         statusText: 'Local Network Access / CORS Blocked',
@@ -204,11 +243,12 @@ export async function executeDirectClientFetch(
             error: `Cannot connect directly to local endpoint at ${targetUrl}`,
             message: err?.message || 'Failed to fetch',
             cause: 'Chrome enforces Private Network Access (PNA) and CORS when HTTPS web apps try to fetch from localhost or private network IPs.',
+            swBridgeStatus: 'Automated Service Worker Bridge and PNA preflight executed.',
             howChromePermissionWorks: [
-              '1. Click "Allow" if Chrome shows a "Local network devices and apps" permission prompt in the browser address bar.',
-              '2. Check Chrome Site Settings -> "Local network access" or "Insecure content" for this origin and set to "Allow".',
+              '1. Click "Allow" if Chrome displays the "Local network devices and apps" permission prompt in the address bar.',
+              '2. Check Chrome Site Settings -> "Local network access" or "Insecure content" for this site origin and set to "Allow".',
               '3. Ensure your local server sends CORS headers: `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Private-Network: true`.',
-              '4. Or expose your local port with `ngrok http <port>` (e.g. https://xxxx.ngrok-free.app) for instant remote & local testing without browser restrictions.'
+              '4. Or run `npx ngrok http <port>` (e.g. https://xxxx.ngrok-free.app) for instant remote & local testing without browser restrictions.'
             ],
             browserError: err?.message || 'Failed to fetch (Permission denied for local network address space)',
           },
@@ -223,6 +263,28 @@ export async function executeDirectClientFetch(
       };
     }
 
+    // For external non-localhost URLs: if direct fetch fails (typically due to browser CORS rules)
+    // automatically proxy the request via /api/proxy to bypass CORS completely
+    try {
+      console.log('[RestStudio] Direct fetch failed for external API. Auto-proxying via /api/proxy to bypass CORS...');
+      const proxyRes = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method, url: targetUrl, headers, body }),
+      });
+
+      if (proxyRes.ok) {
+        const text = await proxyRes.text();
+        const data: ExecutionResponse = JSON.parse(text);
+        if (data.status > 0) {
+          console.log('[RestStudio] Auto-proxy bypass for CORS succeeded!');
+          return data;
+        }
+      }
+    } catch (proxyErr) {
+      console.warn('[RestStudio] Auto-proxy bypass attempt failed:', proxyErr);
+    }
+
     return {
       status: 0,
       statusText: 'Network Error / CORS Blocked',
@@ -232,11 +294,11 @@ export async function executeDirectClientFetch(
           error: 'Direct Client-Side Fetch failed (CORS restriction or network error).',
           targetUrl,
           message: err?.message || 'Failed to fetch',
-          cause: 'Browsers enforce Same-Origin Policy (CORS). If the target server does not send `Access-Control-Allow-Origin` headers, direct browser requests are blocked.',
+          cause: 'Browsers enforce Same-Origin Policy (CORS). RestStudio automatically attempted the CORS-bypass server proxy.',
           tips: [
             '1. Ensure the target URL is correct and accessible.',
             '2. Test APIs that allow public CORS (e.g. jsonplaceholder.typicode.com, httpbin.org).',
-            '3. Configure a custom CORS proxy in RestStudio Settings if contacting non-CORS APIs.',
+            '3. Check server logs or firewall settings for target URL.',
           ],
         },
         null,

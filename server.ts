@@ -9,12 +9,24 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // Global CORS Middleware to ensure zero CORS restrictions on proxy API
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', '*');
+    res.header('Access-Control-Allow-Private-Network', 'true');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'RestStudio API Proxy' });
   });
 
-  // REST Request Proxy Endpoint
+  // REST Request Proxy Endpoint - Bypasses Browser CORS for all external APIs
   app.post('/api/proxy', async (req, res) => {
     const { method = 'GET', url, headers = {}, body } = req.body;
 
@@ -63,17 +75,31 @@ async function startServer() {
     const startTime = performance.now();
 
     try {
+      // Clean up headers to prevent host/content-length conflicts
+      const cleanedHeaders: Record<string, string> = {
+        'User-Agent': 'RestStudio-REST-Client/1.0 (CORS-Bypass)',
+      };
+
+      if (headers && typeof headers === 'object') {
+        Object.entries(headers).forEach(([k, v]) => {
+          const lowerKey = k.toLowerCase();
+          if (lowerKey !== 'host' && lowerKey !== 'content-length' && lowerKey !== 'connection') {
+            cleanedHeaders[k] = String(v);
+          }
+        });
+      }
+
       const fetchOptions: RequestInit = {
         method: method.toUpperCase(),
-        headers: {
-          'User-Agent': 'RestStudio-REST-Client/1.0',
-          ...headers,
-        },
+        headers: cleanedHeaders,
       };
 
       if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
         if (typeof body === 'object') {
           fetchOptions.body = JSON.stringify(body);
+          if (!cleanedHeaders['Content-Type'] && !cleanedHeaders['content-type']) {
+            cleanedHeaders['Content-Type'] = 'application/json';
+          }
         } else {
           fetchOptions.body = String(body);
         }
