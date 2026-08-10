@@ -52,13 +52,42 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
 
   const handleRequestPermission = async () => {
     setIsRequestingPerm(true);
-    setPermissionMsg('Triggering Chrome Local Network Access permission prompt...');
-    const res = await requestLocalNetworkPermission();
-    setIsRequestingPerm(false);
-    if (res.granted) {
-      setPermissionMsg('✅ Local Network Access permission granted! Re-send your request to verify.');
-    } else {
-      setPermissionMsg(`⚠️ ${res.message}`);
+    setPermissionMsg('Checking local server connectivity and triggering preflight...');
+
+    let targetUrl = 'http://localhost:3000/';
+    try {
+      const parsed = JSON.parse(displayResponse.body);
+      if (parsed.targetUrl) targetUrl = parsed.targetUrl;
+    } catch {}
+
+    let targetPort = 3000;
+    try {
+      const u = new URL(targetUrl);
+      if (u.port) targetPort = parseInt(u.port, 10);
+    } catch {}
+
+    try {
+      // Step 1: Preflight OPTIONS test
+      const res = await requestLocalNetworkPermission(targetUrl);
+      if (res.granted) {
+        setPermissionMsg(`✅ Local Network Access preflight granted for ${targetUrl}!`);
+        setIsRequestingPerm(false);
+        return;
+      }
+
+      // Step 2: Direct no-cors ping test to check if local server is listening
+      try {
+        await fetch(targetUrl, { method: 'GET', mode: 'no-cors' });
+        setPermissionMsg(`✅ Detected active server at ${targetUrl}!`);
+      } catch (pingErr: any) {
+        setPermissionMsg(
+          `⚠️ Could not reach server at ${targetUrl}. Ensure your local app is running on port ${targetPort}, or use a 1-line tunnel command below.`
+        );
+      }
+    } catch (err: any) {
+      setPermissionMsg(`⚠️ Connection attempt finished: ${err?.message || 'Server unreachable or CORS blocked'}`);
+    } finally {
+      setIsRequestingPerm(false);
     }
   };
 
@@ -391,33 +420,91 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
         {activeTab === 'pretty' && (
           <div className="space-y-3">
             {displayResponse.status === 0 && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 space-y-2.5">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2">
-                    <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
-                    <div>
-                      <h4 className="font-bold text-xs text-amber-300">Local Network Access & Private Network Policy</h4>
-                      <p className="text-[11px] text-slate-300">
-                        Chrome requires user consent when hosted HTTPS web applications access local servers on <code>localhost</code> or private IPs.
+              <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-4 space-y-3 shadow-lg">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start space-x-2.5">
+                    <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-xs text-amber-300">Local Network Access & CORS Diagnostic Assistant</h4>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Browsers block HTTPS web applications from directly fetching <code className="text-amber-300 bg-slate-950 px-1 py-0.5 rounded">http://localhost</code> or private IPs due to Private Network Access (PNA) security policies.
                       </p>
                     </div>
                   </div>
+
                   <button
                     type="button"
                     onClick={handleRequestPermission}
                     disabled={isRequestingPerm}
-                    className="shrink-0 flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-md disabled:opacity-50"
+                    className="shrink-0 flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer shadow-md disabled:opacity-50"
                   >
                     <Zap className="w-3.5 h-3.5" />
-                    <span>{isRequestingPerm ? 'Triggering...' : 'Request Local Network Permission'}</span>
+                    <span>{isRequestingPerm ? 'Diagnosing...' : 'Test Local Access & Preflight'}</span>
                   </button>
                 </div>
 
                 {permissionMsg && (
-                  <div className="p-2 bg-slate-900/90 border border-slate-800 rounded-lg text-xs font-mono text-emerald-300">
+                  <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-amber-300 leading-relaxed">
                     {permissionMsg}
                   </div>
                 )}
+
+                <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">Instant 1-Line Workarounds for Local APIs:</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {/* Ngrok Tunnel Option */}
+                    <div className="bg-slate-950 border border-slate-800 p-2.5 rounded-lg flex items-center justify-between">
+                      <div className="space-y-0.5 min-w-0 pr-2">
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase block">Option A: Ngrok HTTPS Tunnel</span>
+                        <code className="text-[11px] text-slate-200 font-mono block truncate">npx ngrok http 3000</code>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          let port = 3000;
+                          try {
+                            const parsed = JSON.parse(displayResponse.body);
+                            if (parsed.targetUrl) {
+                              const u = new URL(parsed.targetUrl);
+                              if (u.port) port = parseInt(u.port, 10);
+                            }
+                          } catch {}
+                          navigator.clipboard.writeText(`npx ngrok http ${port}`);
+                          setPermissionMsg(`Copied ngrok command: "npx ngrok http ${port}"`);
+                        }}
+                        className="shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
+                      >
+                        Copy Command
+                      </button>
+                    </div>
+
+                    {/* Local CORS Proxy Option */}
+                    <div className="bg-slate-950 border border-slate-800 p-2.5 rounded-lg flex items-center justify-between">
+                      <div className="space-y-0.5 min-w-0 pr-2">
+                        <span className="text-[10px] font-bold text-sky-400 uppercase block">Option B: Local CORS Proxy</span>
+                        <code className="text-[11px] text-slate-200 font-mono block truncate">npx local-cors-proxy</code>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          let port = 3000;
+                          try {
+                            const parsed = JSON.parse(displayResponse.body);
+                            if (parsed.targetUrl) {
+                              const u = new URL(parsed.targetUrl);
+                              if (u.port) port = parseInt(u.port, 10);
+                            }
+                          } catch {}
+                          navigator.clipboard.writeText(`npx local-cors-proxy --proxyUrl http://localhost:${port} --port 8010`);
+                          setPermissionMsg(`Copied proxy command for port ${port}`);
+                        }}
+                        className="shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
+                      >
+                        Copy Command
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

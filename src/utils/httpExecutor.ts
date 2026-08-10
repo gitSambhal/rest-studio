@@ -134,6 +134,76 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
 }
 
 /**
+ * Helper to execute request via public CORS proxies (corsproxy.io, allorigins.win, thingproxy)
+ */
+async function tryPublicCorsProxies(
+  method: string,
+  targetUrl: string,
+  headers: Record<string, string>,
+  body?: any
+): Promise<ExecutionResponse | null> {
+  const proxies = [
+    {
+      name: 'corsproxy.io',
+      getUrl: (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    },
+    {
+      name: 'allorigins.win',
+      getUrl: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    },
+    {
+      name: 'thingproxy',
+      getUrl: (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`,
+    },
+  ];
+
+  for (const proxy of proxies) {
+    try {
+      console.log(`[RestStudio] Attempting public CORS proxy: ${proxy.name}...`);
+      const proxyTargetUrl = proxy.getUrl(targetUrl);
+      const startTime = performance.now();
+
+      const fetchOpts: any = {
+        method: method.toUpperCase(),
+        headers: { ...headers },
+      };
+
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
+        fetchOpts.body = typeof body === 'object' ? JSON.stringify(body) : String(body);
+      }
+
+      const res = await fetch(proxyTargetUrl, fetchOpts);
+      const duration = Math.round(performance.now() - startTime);
+      const text = await res.text();
+
+      if (res.status > 0) {
+        const resHeaders: Record<string, string> = {};
+        res.headers.forEach((v, k) => {
+          resHeaders[k] = v;
+        });
+
+        console.log(`[RestStudio] Public CORS Proxy (${proxy.name}) succeeded! Status: ${res.status}`);
+        return {
+          status: res.status,
+          statusText: res.statusText || 'OK',
+          headers: resHeaders,
+          body: text,
+          size: new Blob([text]).size,
+          duration,
+          timestamp: Date.now(),
+          ok: res.ok,
+          contentType: res.headers.get('content-type') || 'text/plain',
+        };
+      }
+    } catch (proxyErr) {
+      console.warn(`[RestStudio] Public CORS proxy ${proxy.name} failed:`, proxyErr);
+    }
+  }
+
+  return null;
+}
+
+/**
  * Direct Client-Side Browser `fetch()`
  * Executes requests directly from the user's browser without requiring any server or function backend.
  */
@@ -264,7 +334,7 @@ export async function executeDirectClientFetch(
     }
 
     // For external non-localhost URLs: if direct fetch fails (typically due to browser CORS rules)
-    // automatically proxy the request via /api/proxy to bypass CORS completely
+    // 1. Automatically proxy the request via /api/proxy (Axios Server Proxy)
     try {
       console.log('[RestStudio] Direct fetch failed for external API. Auto-proxying via /api/proxy to bypass CORS...');
       const proxyRes = await fetch('/api/proxy', {
@@ -277,12 +347,23 @@ export async function executeDirectClientFetch(
         const text = await proxyRes.text();
         const data: ExecutionResponse = JSON.parse(text);
         if (data.status > 0) {
-          console.log('[RestStudio] Auto-proxy bypass for CORS succeeded!');
+          console.log('[RestStudio] Server auto-proxy bypass for CORS succeeded!');
           return data;
         }
       }
     } catch (proxyErr) {
-      console.warn('[RestStudio] Auto-proxy bypass attempt failed:', proxyErr);
+      console.warn('[RestStudio] Server auto-proxy bypass attempt failed:', proxyErr);
+    }
+
+    // 2. Fallback to public CORS proxy services (corsproxy.io, allorigins.win, thingproxy)
+    try {
+      const publicProxyResult = await tryPublicCorsProxies(method, targetUrl, headers, body);
+      if (publicProxyResult && publicProxyResult.status > 0) {
+        console.log('[RestStudio] Public CORS proxy bypass succeeded!');
+        return publicProxyResult;
+      }
+    } catch (pubProxyErr) {
+      console.warn('[RestStudio] Public CORS proxy pipeline failed:', pubProxyErr);
     }
 
     return {
@@ -291,14 +372,14 @@ export async function executeDirectClientFetch(
       headers: {},
       body: JSON.stringify(
         {
-          error: 'Direct Client-Side Fetch failed (CORS restriction or network error).',
+          error: 'Fetch failed across Direct Fetch, Server Axios Proxy, and Public CORS Proxies (corsproxy.io, allorigins.win).',
           targetUrl,
           message: err?.message || 'Failed to fetch',
-          cause: 'Browsers enforce Same-Origin Policy (CORS). RestStudio automatically attempted the CORS-bypass server proxy.',
+          cause: 'Browsers enforce Same-Origin Policy (CORS). RestStudio automatically attempted the server proxy and public CORS proxy services.',
           tips: [
-            '1. Ensure the target URL is correct and accessible.',
-            '2. Test APIs that allow public CORS (e.g. jsonplaceholder.typicode.com, httpbin.org).',
-            '3. Check server logs or firewall settings for target URL.',
+            '1. Ensure the target URL is correct, valid, and publicly reachable.',
+            '2. Check if the target API endpoint is currently online.',
+            '3. For local APIs (http://localhost), ensure your server is running and listening.',
           ],
         },
         null,

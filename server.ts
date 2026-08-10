@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import axios from 'axios';
 import { createServer as createViteServer } from 'vite';
 
 async function startServer() {
@@ -26,7 +27,7 @@ async function startServer() {
     res.json({ status: 'ok', service: 'RestStudio API Proxy' });
   });
 
-  // REST Request Proxy Endpoint - Bypasses Browser CORS for all external APIs
+  // REST Request Proxy Endpoint - Uses Axios on server to bypass Browser CORS for ALL external APIs
   app.post('/api/proxy', async (req, res) => {
     const { method = 'GET', url, headers = {}, body } = req.body;
 
@@ -77,7 +78,7 @@ async function startServer() {
     try {
       // Clean up headers to prevent host/content-length conflicts
       const cleanedHeaders: Record<string, string> = {
-        'User-Agent': 'RestStudio-REST-Client/1.0 (CORS-Bypass)',
+        'User-Agent': 'RestStudio-REST-Client/1.0 (CORS-Bypass-Axios)',
       };
 
       if (headers && typeof headers === 'object') {
@@ -89,57 +90,90 @@ async function startServer() {
         });
       }
 
-      const fetchOptions: RequestInit = {
+      const axiosResponse = await axios({
         method: method.toUpperCase(),
+        url: targetUrl,
         headers: cleanedHeaders,
-      };
+        data: body !== undefined && body !== null ? body : undefined,
+        validateStatus: () => true, // Don't throw on non-2xx status codes
+        responseType: 'text',
+        timeout: 25000,
+        maxRedirects: 10,
+      });
 
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
-        if (typeof body === 'object') {
-          fetchOptions.body = JSON.stringify(body);
-          if (!cleanedHeaders['Content-Type'] && !cleanedHeaders['content-type']) {
-            cleanedHeaders['Content-Type'] = 'application/json';
-          }
-        } else {
-          fetchOptions.body = String(body);
-        }
-      }
-
-      const response = await fetch(targetUrl, fetchOptions);
       const endTime = performance.now();
       const duration = Math.round(endTime - startTime);
 
-      const responseText = await response.text();
+      const responseText = typeof axiosResponse.data === 'string' 
+        ? axiosResponse.data 
+        : JSON.stringify(axiosResponse.data);
+
       const responseSize = Buffer.byteLength(responseText, 'utf8');
 
       // Extract response headers
       const resHeaders: Record<string, string> = {};
-      response.headers.forEach((val, key) => {
-        resHeaders[key] = val;
-      });
+      if (axiosResponse.headers) {
+        Object.entries(axiosResponse.headers).forEach(([k, v]) => {
+          if (v !== undefined) {
+            resHeaders[k] = Array.isArray(v) ? v.join(', ') : String(v);
+          }
+        });
+      }
 
       res.json({
-        status: response.status,
-        statusText: response.statusText || 'OK',
+        status: axiosResponse.status,
+        statusText: axiosResponse.statusText || 'OK',
         headers: resHeaders,
         body: responseText,
         size: responseSize,
         duration,
         timestamp: Date.now(),
-        ok: response.ok,
-        contentType: response.headers.get('content-type') || 'text/plain',
+        ok: axiosResponse.status >= 200 && axiosResponse.status < 300,
+        contentType: resHeaders['content-type'] || 'text/plain',
       });
     } catch (err: any) {
+      // Fallback server-side attempt using public CORS proxy (corsproxy.io / allorigins.win)
+      try {
+        console.log('[RestStudio Proxy] Direct Axios failed. Attempting corsproxy.io fallback...');
+        const fallbackUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+        const fallbackRes = await axios({
+          method: method.toUpperCase(),
+          url: fallbackUrl,
+          data: body !== undefined && body !== null ? body : undefined,
+          validateStatus: () => true,
+          responseType: 'text',
+          timeout: 15000,
+        });
+
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        const responseText = typeof fallbackRes.data === 'string' ? fallbackRes.data : JSON.stringify(fallbackRes.data);
+
+        return res.json({
+          status: fallbackRes.status,
+          statusText: fallbackRes.statusText || 'OK',
+          headers: {},
+          body: responseText,
+          size: Buffer.byteLength(responseText, 'utf8'),
+          duration,
+          timestamp: Date.now(),
+          ok: fallbackRes.status >= 200 && fallbackRes.status < 300,
+          contentType: 'text/plain',
+        });
+      } catch (fallbackErr) {
+        console.warn('[RestStudio Proxy] Corsproxy.io fallback failed:', fallbackErr);
+      }
+
       const endTime = performance.now();
       const duration = Math.round(endTime - startTime);
 
       res.status(502).json({
         status: 0,
-        statusText: 'Network Error',
+        statusText: 'Network Error / Proxy Error',
         headers: {},
         body: JSON.stringify(
           {
-            error: 'Failed to connect to target server',
+            error: 'Failed to connect to target server via Axios proxy or Public CORS Proxy',
             details: err.message || String(err),
             targetUrl,
           },
