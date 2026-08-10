@@ -44,6 +44,296 @@ interface SidebarProps {
   onOpenQuickCurl?: () => void;
 }
 
+interface RenderRestFileProps {
+  file: RestFile;
+  projectFolders: RestFolder[];
+  activeFileId: string | null;
+  activeRequestId: string | null;
+  searchQuery: string;
+  getMethodBadgeColor: (method: HTTPMethod) => string;
+  onSelectFile: (fileId: string) => void;
+  onSelectRequest: (fileId: string, requestId: string) => void;
+  onCreateRequest: (fileId: string, method: HTTPMethod, name: string) => void;
+  onRenameFile: (fileId: string, newName: string) => void;
+  onDuplicateFile: (fileId: string) => void;
+  onDeleteFile: (fileId: string) => void;
+  onMoveFileToFolder: (fileId: string, targetFolderId: string | null) => void;
+  onRenameRequest: (fileId: string, requestId: string, newName: string) => void;
+  onDuplicateRequest: (fileId: string, requestId: string) => void;
+  onDeleteRequest: (fileId: string, requestId: string) => void;
+  onMoveRequestOrder: (fileId: string, requestId: string, direction: 'up' | 'down') => void;
+  openPrompt: (config: {
+    title: string;
+    message?: string;
+    initialValue?: string;
+    placeholder?: string;
+    confirmLabel?: string;
+    hideInput?: boolean;
+    onConfirm: (value: string) => void;
+  }) => void;
+}
+
+const RenderRestFile: React.FC<RenderRestFileProps> = ({
+  file,
+  projectFolders,
+  activeFileId,
+  activeRequestId,
+  searchQuery,
+  getMethodBadgeColor,
+  onSelectFile,
+  onSelectRequest,
+  onCreateRequest,
+  onRenameFile,
+  onDuplicateFile,
+  onDeleteFile,
+  onMoveFileToFolder,
+  onRenameRequest,
+  onDuplicateRequest,
+  onDeleteRequest,
+  onMoveRequestOrder,
+  openPrompt,
+}) => {
+  const isFileActive = activeFileId === file.id;
+  const requests = file.requests || [];
+  const filteredRequests = searchQuery
+    ? requests.filter(
+        (r) =>
+          r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.method.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : requests;
+
+  return (
+    <div key={file.id} className="space-y-0.5">
+      {/* Rest File Row */}
+      <div
+        onClick={() => onSelectFile(file.id)}
+        className={`group flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-mono cursor-pointer transition-colors ${
+          isFileActive
+            ? 'bg-slate-800 text-slate-100 font-medium'
+            : 'text-slate-300 hover:bg-slate-800/60 hover:text-slate-100'
+        }`}
+      >
+        <div className="flex items-center space-x-2 min-w-0">
+          <FileCode className={`w-3.5 h-3.5 shrink-0 ${isFileActive ? 'text-blue-400' : 'text-slate-400'}`} />
+          <span className="truncate">{file.name}</span>
+          <span className="text-[10px] text-slate-500 font-mono">({requests.length})</span>
+        </div>
+
+        {/* Actions Menu for File */}
+        <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1 shrink-0 transition-opacity">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPrompt({
+                title: 'New Request in File',
+                message: `Add request to ${file.name}`,
+                initialValue: 'GET New Endpoint',
+                placeholder: 'e.g. GET User Profile',
+                confirmLabel: 'Add Request',
+                onConfirm: (val) => {
+                  const parts = val.trim().split(' ');
+                  let method: HTTPMethod = 'GET';
+                  let reqName = val.trim();
+                  if (parts.length > 1 && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(parts[0].toUpperCase())) {
+                    method = parts[0].toUpperCase() as HTTPMethod;
+                    reqName = parts.slice(1).join(' ');
+                  }
+                  onCreateRequest(file.id, method, reqName);
+                },
+              });
+            }}
+            title="Add Request"
+            className="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+          >
+            <Plus className="w-3 h-3 text-emerald-400" />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPrompt({
+                title: 'Rename File',
+                initialValue: file.name,
+                placeholder: 'e.g. api-v2.rest',
+                confirmLabel: 'Rename',
+                onConfirm: (val) => {
+                  if (val.trim()) onRenameFile(file.id, val.trim());
+                },
+              });
+            }}
+            title="Rename File"
+            className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicateFile(file.id);
+            }}
+            title="Duplicate File"
+            className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+          >
+            <Copy className="w-3 h-3" />
+          </button>
+
+          {projectFolders.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Cycle through folders or move out
+                const currentFolderId = file.folderId || null;
+                const folderIds = [null, ...projectFolders.map((f) => f.id)];
+                const currentIndex = folderIds.indexOf(currentFolderId);
+                const nextFolderId = folderIds[(currentIndex + 1) % folderIds.length];
+                onMoveFileToFolder(file.id, nextFolderId);
+              }}
+              title="Move to folder"
+              className="p-1 text-slate-400 hover:text-sky-400 hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+            >
+              <FolderInput className="w-3 h-3" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPrompt({
+                title: 'Delete File',
+                message: `Are you sure you want to delete ${file.name}?`,
+                hideInput: true,
+                confirmLabel: 'Delete File',
+                onConfirm: () => onDeleteFile(file.id),
+              });
+            }}
+            title="Delete File"
+            className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded cursor-pointer transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Requests List inside File */}
+      {filteredRequests.length > 0 && (
+        <div className="pl-4 space-y-0.5 border-l border-slate-800 ml-3">
+          {filteredRequests.map((req, reqIdx) => {
+            const isReqActive = activeFileId === file.id && activeRequestId === req.id;
+            return (
+              <div
+                key={req.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectRequest(file.id, req.id);
+                }}
+                className={`group flex items-center justify-between px-2 py-1 rounded text-[11px] font-mono cursor-pointer transition-all ${
+                  isReqActive
+                    ? 'bg-slate-800/90 text-slate-100 font-semibold border-l-2 border-emerald-400'
+                    : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                }`}
+              >
+                <div className="flex items-center space-x-1.5 min-w-0">
+                  <span className={`text-[9px] font-extrabold px-1 rounded ${getMethodBadgeColor(req.method)}`}>
+                    {req.method}
+                  </span>
+                  <span className="truncate">{req.name}</span>
+                </div>
+
+                {/* Actions Menu for Request */}
+                <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-0.5 shrink-0 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveRequestOrder(file.id, req.id, 'up');
+                    }}
+                    disabled={reqIdx === 0}
+                    title="Move Up"
+                    className="p-0.5 text-slate-500 hover:text-slate-200 disabled:opacity-30 disabled:hover:text-slate-500"
+                  >
+                    <ArrowUp className="w-2.5 h-2.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveRequestOrder(file.id, req.id, 'down');
+                    }}
+                    disabled={reqIdx === filteredRequests.length - 1}
+                    title="Move Down"
+                    className="p-0.5 text-slate-500 hover:text-slate-200 disabled:opacity-30 disabled:hover:text-slate-500"
+                  >
+                    <ArrowDown className="w-2.5 h-2.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPrompt({
+                        title: 'Rename Request',
+                        initialValue: req.name,
+                        placeholder: 'e.g. GET User Profile',
+                        confirmLabel: 'Rename',
+                        onConfirm: (val) => {
+                          if (val.trim()) onRenameRequest(file.id, req.id, val.trim());
+                        },
+                      });
+                    }}
+                    title="Rename Request"
+                    className="p-0.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+                  >
+                    <Edit2 className="w-2.5 h-2.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDuplicateRequest(file.id, req.id);
+                    }}
+                    title="Duplicate Request"
+                    className="p-0.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+                  >
+                    <Copy className="w-2.5 h-2.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPrompt({
+                        title: 'Delete Request',
+                        message: `Are you sure you want to delete request "${req.name}"?`,
+                        hideInput: true,
+                        confirmLabel: 'Delete Request',
+                        onConfirm: () => onDeleteRequest(file.id, req.id),
+                      });
+                    }}
+                    title="Delete Request"
+                    className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded cursor-pointer transition-colors"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({
   project,
   activeFileId,
@@ -389,317 +679,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 };
 
-interface RenderRestFileProps {
-  file: RestFile;
-  projectFolders: RestFolder[];
-  activeFileId: string | null;
-  activeRequestId: string | null;
-  searchQuery: string;
-  getMethodBadgeColor: (method: HTTPMethod) => string;
-  onSelectFile: (fileId: string) => void;
-  onSelectRequest: (fileId: string, requestId: string) => void;
-  onCreateRequest: (fileId: string, method: HTTPMethod, name: string) => void;
-  onRenameFile: (fileId: string, newName: string) => void;
-  onDuplicateFile: (fileId: string) => void;
-  onDeleteFile: (fileId: string) => void;
-  onMoveFileToFolder: (fileId: string, targetFolderId: string | null) => void;
-  onRenameRequest: (fileId: string, requestId: string, newName: string) => void;
-  onDuplicateRequest: (fileId: string, requestId: string) => void;
-  onDeleteRequest: (fileId: string, requestId: string) => void;
-  onMoveRequestOrder: (fileId: string, requestId: string, direction: 'up' | 'down') => void;
-  openPrompt: (config: {
-    title: string;
-    message?: string;
-    initialValue?: string;
-    placeholder?: string;
-    confirmLabel?: string;
-    hideInput?: boolean;
-    onConfirm: (value: string) => void;
-  }) => void;
-}
-
-const RenderRestFile: React.FC<RenderRestFileProps> = ({
-  file,
-  projectFolders,
-  activeFileId,
-  activeRequestId,
-  searchQuery,
-  getMethodBadgeColor,
-  onSelectFile,
-  onSelectRequest,
-  onCreateRequest,
-  onRenameFile,
-  onDuplicateFile,
-  onDeleteFile,
-  onMoveFileToFolder,
-  onRenameRequest,
-  onDuplicateRequest,
-  onDeleteRequest,
-  onMoveRequestOrder,
-  openPrompt,
-}) => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [showMoveMenu, setShowMoveMenu] = useState(false);
-  const isFileActive = activeFileId === file.id;
-
-  const filteredRequests = (file?.requests || []).filter(
-    (req) =>
-      !searchQuery ||
-      req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.method.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  return (
-    <div className="space-y-1 relative">
-      {/* File row */}
-      <div
-        className={`group flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${
-          isFileActive && !activeRequestId
-            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/30'
-            : 'hover:bg-slate-800/80 text-slate-700 dark:text-slate-200'
-        }`}
-        onClick={() => {
-          onSelectFile(file.id);
-          setIsOpen(!isOpen);
-        }}
-      >
-        <div className="flex items-center space-x-2 truncate">
-          <FileCode className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span className="font-mono text-xs truncate font-bold text-slate-900 dark:text-slate-100">{file.name}</span>
-        </div>
-
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              openPrompt({
-                title: `New Request in ${file.name}`,
-                message: 'Enter endpoint request name:',
-                initialValue: 'GET /api/data',
-                placeholder: 'e.g. GET User Profile',
-                confirmLabel: 'Add Request',
-                onConfirm: (reqName) => {
-                  if (reqName) onCreateRequest(file.id, 'GET', reqName);
-                },
-              });
-            }}
-            title="Add Request"
-            className="p-1 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 rounded cursor-pointer"
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              openPrompt({
-                title: 'Rename File',
-                initialValue: file.name,
-                confirmLabel: 'Rename',
-                onConfirm: (newName) => {
-                  if (newName && newName !== file.name) onRenameFile(file.id, newName);
-                },
-              });
-            }}
-            title="Rename File"
-            className="p-1 hover:bg-slate-700 text-slate-300 hover:text-blue-400 rounded cursor-pointer"
-          >
-            <Edit2 className="w-3 h-3" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicateFile(file.id);
-            }}
-            title="Duplicate File"
-            className="p-1 hover:bg-slate-700 text-slate-300 hover:text-amber-400 rounded"
-          >
-            <Copy className="w-3 h-3" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMoveMenu(!showMoveMenu);
-            }}
-            title="Move File to Folder"
-            className="p-1 hover:bg-slate-700 text-slate-300 hover:text-purple-400 rounded"
-          >
-            <FolderInput className="w-3 h-3" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              openPrompt({
-                title: 'Delete File',
-                message: `Are you sure you want to delete file "${file.name}"?`,
-                hideInput: true,
-                confirmLabel: 'Delete File',
-                onConfirm: () => onDeleteFile(file.id),
-              });
-            }}
-            title="Delete File"
-            className="p-1 hover:bg-rose-500/15 text-slate-400 hover:text-rose-400 rounded cursor-pointer transition-colors"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
-
-      {/* Move File Popover */}
-      {showMoveMenu && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="absolute right-2 top-8 z-30 bg-slate-900 border border-slate-700 rounded-lg shadow-xl p-2 w-48 text-xs font-sans space-y-1"
-        >
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-            Move File To:
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveFileToFolder(file.id, null);
-              setShowMoveMenu(false);
-            }}
-            className="w-full text-left px-2 py-1 rounded hover:bg-slate-800 text-slate-200 cursor-pointer"
-          >
-            / Root Level
-          </button>
-          {projectFolders.map((fold) => (
-            <button
-              key={fold.id}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onMoveFileToFolder(file.id, fold.id);
-                setShowMoveMenu(false);
-              }}
-              className="w-full text-left px-2 py-1 rounded hover:bg-slate-800 text-amber-300 truncate cursor-pointer"
-            >
-              📁 {fold.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Individual Requests under file */}
-      {isOpen && (
-        <div className="pl-3 space-y-0.5 border-l border-slate-800 ml-3">
-          {filteredRequests.map((req, idx) => {
-            const isReqActive = activeRequestId === req.id;
-            return (
-              <div
-                key={req.id}
-                onClick={() => onSelectRequest(file.id, req.id)}
-                className={`group flex items-center justify-between px-2 py-1 rounded cursor-pointer transition-colors ${
-                  isReqActive
-                    ? 'bg-emerald-500/15 text-slate-950 dark:text-white font-bold border-l-2 border-emerald-500'
-                    : 'hover:bg-slate-800/60 text-slate-900 dark:text-slate-200'
-                }`}
-              >
-                <div className="flex items-center space-x-2 truncate">
-                  <span
-                    className={`font-mono font-bold text-[9px] px-1 py-0.2 rounded border uppercase shrink-0 ${getMethodBadgeColor(
-                      req.method
-                    )}`}
-                  >
-                    {req.method}
-                  </span>
-                  <span className="font-mono text-[11px] truncate font-semibold text-slate-900 dark:text-slate-100">{req.name}</span>
-                </div>
-
-                <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMoveRequestOrder(file.id, req.id, 'up');
-                      }}
-                      title="Move Up"
-                      className="p-0.5 text-slate-400 hover:text-emerald-400"
-                    >
-                      <ArrowUp className="w-2.5 h-2.5" />
-                    </button>
-                  )}
-
-                  {idx < (file?.requests?.length || 0) - 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMoveRequestOrder(file.id, req.id, 'down');
-                      }}
-                      title="Move Down"
-                      className="p-0.5 text-slate-400 hover:text-emerald-400"
-                    >
-                      <ArrowDown className="w-2.5 h-2.5" />
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPrompt({
-                        title: 'Rename Request',
-                        initialValue: req.name,
-                        confirmLabel: 'Rename',
-                        onConfirm: (newName) => {
-                          if (newName && newName !== req.name) onRenameRequest(file.id, req.id, newName);
-                        },
-                      });
-                    }}
-                    title="Rename Request"
-                    className="p-0.5 text-slate-400 hover:text-blue-400 cursor-pointer"
-                  >
-                    <Edit2 className="w-2.5 h-2.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDuplicateRequest(file.id, req.id);
-                    }}
-                    title="Duplicate Request"
-                    className="p-0.5 text-slate-400 hover:text-amber-400"
-                  >
-                    <Copy className="w-2.5 h-2.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPrompt({
-                        title: 'Delete Request',
-                        message: `Are you sure you want to delete request "${req.name}"?`,
-                        hideInput: true,
-                        confirmLabel: 'Delete Request',
-                        onConfirm: () => onDeleteRequest(file.id, req.id),
-                      });
-                    }}
-                    title="Delete Request"
-                    className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded cursor-pointer transition-colors"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};

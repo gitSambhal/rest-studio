@@ -143,6 +143,7 @@ export interface RestFile {
   rawContent: string;
   requests: RestRequest[];
   fileVariables?: Record<string, string>;
+  folderId?: string | null;
   auth?: RequestAuth;
   updatedAt: number;
 }

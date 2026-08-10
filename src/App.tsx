@@ -143,6 +143,7 @@ export default function App() {
     initialValue?: string;
     placeholder?: string;
     confirmLabel?: string;
+    hideInput?: boolean;
     onConfirm: (value: string) => void;
   }>({
     isOpen: false,
@@ -661,27 +662,31 @@ export default function App() {
   };
 
   const handleCreateNewTabWithDummy = () => {
-    if (!activeFile || !activeProject) return;
+    const targetFile = activeFile || activeProject?.files?.[0];
+    if (!targetFile || !activeProject) {
+      setIsQuickNewRequestOpen(true);
+      return;
+    }
 
     const dummyReq: RestRequest = {
       id: 'req_' + Math.random().toString(36).substring(2, 9),
-      name: 'GET Todo Item (Dummy URL)',
+      name: 'New Request',
       method: 'GET',
-      url: 'https://jsonplaceholder.typicode.com/todos/1',
+      url: '{{baseUrl}}/users',
       headers: [
         { id: 'h1', key: 'Accept', value: 'application/json', enabled: true },
       ],
       queryParams: [],
       body: { mode: 'none', rawText: '' },
-      auth: { type: 'none', bearerToken: '' },
+      auth: { type: 'inherit', bearerToken: '' },
     };
 
     const updatedFiles = (activeProject.files || []).map((f) =>
-      f.id === activeFile.id ? { ...f, requests: [...(f.requests || []), dummyReq] } : f
+      f.id === targetFile.id ? { ...f, requests: [...(f.requests || []), dummyReq] } : f
     );
     updateProjectFiles(updatedFiles);
 
-    handleOpenRequestInTab(activeFile.id, dummyReq.id);
+    handleOpenRequestInTab(targetFile.id, dummyReq.id);
   };
 
   const handleCloseTab = (tabId: string) => {
@@ -1324,6 +1329,154 @@ export default function App() {
 
         setOrganizations(organizations.map((o) => (o.id === activeOrg.id ? updatedOrg : o)));
         setActiveProjectId(newProj.id);
+        showToast('success', 'Project Created', `Created project "${name}".`);
+      },
+    });
+  };
+
+  // Organization Rename & Delete
+  const handleRenameOrg = (orgId: string, currentName: string) => {
+    setAppPromptState({
+      isOpen: true,
+      title: 'Rename Organization',
+      message: 'Enter new name for organization:',
+      initialValue: currentName,
+      placeholder: 'e.g. Acme Corp',
+      confirmLabel: 'Save Name',
+      onConfirm: (newName) => {
+        if (!newName || !newName.trim()) return;
+        setOrganizations((prev) =>
+          prev.map((o) => (o.id === orgId ? { ...o, name: newName.trim(), updatedAt: Date.now() } : o))
+        );
+        showToast('success', 'Organization Renamed', 'Organization renamed successfully.');
+      },
+    });
+  };
+
+  const handleDeleteOrg = (orgId: string, currentName: string) => {
+    if (organizations.length <= 1) {
+      showToast('error', 'Delete Error', 'Cannot delete the only organization workspace.');
+      return;
+    }
+    setAppPromptState({
+      isOpen: true,
+      title: 'Delete Organization',
+      message: `Are you sure you want to delete "${currentName}"? All projects, files, and endpoints inside this organization will be removed.`,
+      hideInput: true,
+      confirmLabel: 'Delete Organization',
+      onConfirm: () => {
+        const remaining = organizations.filter((o) => o.id !== orgId);
+        setOrganizations(remaining);
+        if (activeOrgId === orgId) {
+          setActiveOrgId(remaining[0].id);
+          if (remaining[0].projects.length > 0) {
+            setActiveProjectId(remaining[0].projects[0].id);
+          }
+        }
+        showToast('info', 'Organization Deleted', `Organization "${currentName}" deleted.`);
+      },
+    });
+  };
+
+  // Project Rename & Delete
+  const handleRenameProject = (projectId: string, currentName: string) => {
+    setAppPromptState({
+      isOpen: true,
+      title: 'Rename Project',
+      message: 'Enter new name for project:',
+      initialValue: currentName,
+      placeholder: 'e.g. Microservices',
+      confirmLabel: 'Save Name',
+      onConfirm: (newName) => {
+        if (!newName || !newName.trim()) return;
+        setOrganizations((prev) =>
+          prev.map((org) =>
+            org.id === activeOrg.id
+              ? {
+                  ...org,
+                  projects: org.projects.map((p) =>
+                    p.id === projectId ? { ...p, name: newName.trim(), updatedAt: Date.now() } : p
+                  ),
+                }
+              : org
+          )
+        );
+        showToast('success', 'Project Renamed', 'Project renamed successfully.');
+      },
+    });
+  };
+
+  const handleDeleteProject = (projectId: string, currentName: string) => {
+    setAppPromptState({
+      isOpen: true,
+      title: 'Delete Project',
+      message: `Are you sure you want to delete project "${currentName}"?`,
+      hideInput: true,
+      confirmLabel: 'Delete Project',
+      onConfirm: () => {
+        const currentProjects = activeOrg?.projects || [];
+        const remaining = currentProjects.filter((p) => p.id !== projectId);
+
+        let finalProjects = remaining;
+        if (remaining.length === 0) {
+          const defaultProj: Project = {
+            id: 'proj_' + Math.random().toString(36).substring(2, 9),
+            name: 'API Workspace',
+            description: 'Default REST Project',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            activeEnvId: 'env_dev',
+            environments: [
+              {
+                id: 'env_dev',
+                name: 'Development',
+                color: '#10b981',
+                variables: [
+                  { id: 'v1', key: 'baseUrl', value: 'https://jsonplaceholder.typicode.com', enabled: true },
+                ],
+              },
+            ],
+            folders: [],
+            files: [
+              {
+                id: 'file_default',
+                name: 'default.rest',
+                updatedAt: Date.now(),
+                rawContent: `### Health Check\nGET {{baseUrl}}/todos/1\n`,
+                requests: [
+                  {
+                    id: 'req_hc',
+                    name: 'Health Check',
+                    method: 'GET',
+                    url: '{{baseUrl}}/todos/1',
+                    headers: [],
+                    queryParams: [],
+                    body: { mode: 'none', rawText: '' },
+                    auth: { type: 'none', bearerToken: '' },
+                  },
+                ],
+              },
+            ],
+          };
+          finalProjects = [defaultProj];
+        }
+
+        setOrganizations((prev) =>
+          prev.map((org) =>
+            org.id === activeOrg.id
+              ? {
+                  ...org,
+                  projects: finalProjects,
+                }
+              : org
+          )
+        );
+
+        if (activeProjectId === projectId) {
+          setActiveProjectId(finalProjects[0].id);
+        }
+
+        showToast('info', 'Project Deleted', `Project "${currentName}" deleted.`);
       },
     });
   };
@@ -1336,10 +1489,14 @@ export default function App() {
         activeOrg={activeOrg}
         onSelectOrg={(org) => setActiveOrgId(org.id)}
         onOpenNewOrgModal={handleCreateNewOrg}
+        onRenameOrg={handleRenameOrg}
+        onDeleteOrg={handleDeleteOrg}
         projects={activeOrg?.projects || []}
         activeProject={activeProject}
         onSelectProject={(p) => setActiveProjectId(p.id)}
         onOpenNewProjectModal={handleCreateNewProject}
+        onRenameProject={handleRenameProject}
+        onDeleteProject={handleDeleteProject}
         onSelectEnvironment={(envId) => {
           setOrganizations((prev) =>
             prev.map((org) =>
@@ -1701,6 +1858,8 @@ export default function App() {
         initialValue={appPromptState.initialValue}
         placeholder={appPromptState.placeholder}
         confirmLabel={appPromptState.confirmLabel}
+        hideInput={appPromptState.hideInput}
+        isDarkMode={isDarkMode}
         onConfirm={(val) => {
           appPromptState.onConfirm(val);
           setAppPromptState((prev) => ({ ...prev, isOpen: false }));

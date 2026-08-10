@@ -39,8 +39,17 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests and proxy API endpoints
-  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+  // Skip non-GET requests, proxy API endpoints, and Vite dev/module assets
+  if (
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.startsWith('/@') ||
+    url.search.includes('v=') ||
+    url.pathname.endsWith('.tsx') ||
+    url.pathname.endsWith('.ts')
+  ) {
     return;
   }
 

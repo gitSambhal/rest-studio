@@ -14,6 +14,54 @@ async function startServer() {
     res.json({ status: 'ok', service: 'RestStudio API Proxy' });
   });
 
+  // Built-in Mock Endpoints for testing localhost calls
+  app.get('/api/v1/users', (req, res) => {
+    res.json({
+      success: true,
+      data: [
+        { id: 1, name: 'Alice Johnson', email: 'alice@example.com', role: 'admin' },
+        { id: 2, name: 'Bob Smith', email: 'bob@example.com', role: 'developer' },
+        { id: 3, name: 'Carol Williams', email: 'carol@example.com', role: 'viewer' },
+      ],
+      total: 3,
+      page: 1,
+    });
+  });
+
+  app.get('/api/v1/posts', (req, res) => {
+    res.json({
+      success: true,
+      data: [
+        { id: 101, title: 'Getting Started with RestStudio', author: 'Alice', views: 1250 },
+        { id: 102, title: 'Building RESTful APIs with Express', author: 'Bob', views: 890 },
+      ],
+    });
+  });
+
+  app.post('/api/v1/auth/login', (req, res) => {
+    const { username, email, password } = req.body || {};
+    res.json({
+      success: true,
+      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+      tokenType: 'Bearer',
+      user: {
+        id: 'usr_89213',
+        name: username || 'Demo User',
+        email: email || 'user@example.com',
+      },
+    });
+  });
+
+  app.all('/api/v1/echo', (req, res) => {
+    res.json({
+      method: req.method,
+      query: req.query,
+      headers: req.headers,
+      body: req.body,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // REST Request Proxy Endpoint
   app.post('/api/proxy', async (req, res) => {
     const { method = 'GET', url, headers = {}, body } = req.body;
@@ -26,7 +74,33 @@ async function startServer() {
     // Ensure URL has protocol
     let targetUrl = url.trim();
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-      targetUrl = 'https://' + targetUrl;
+      if (targetUrl.startsWith('/')) {
+        targetUrl = 'http://localhost:3000' + targetUrl;
+      } else if (
+        targetUrl.startsWith('localhost') ||
+        targetUrl.startsWith('127.0.0.1') ||
+        targetUrl.startsWith('0.0.0.0')
+      ) {
+        targetUrl = 'http://' + targetUrl;
+      } else {
+        targetUrl = 'https://' + targetUrl;
+      }
+    }
+
+    // Prevent recursive proxy loops
+    if (targetUrl.includes('/api/proxy')) {
+      res.status(400).json({
+        status: 400,
+        statusText: 'Bad Request',
+        headers: {},
+        body: JSON.stringify({ error: 'Cannot proxy request recursively to /api/proxy' }, null, 2),
+        size: 0,
+        duration: 0,
+        timestamp: Date.now(),
+        ok: false,
+        error: 'Recursive proxy call prohibited',
+      });
+      return;
     }
 
     const startTime = performance.now();
