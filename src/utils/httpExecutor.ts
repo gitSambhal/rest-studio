@@ -143,12 +143,21 @@ export async function executeDirectClientFetch(
   body?: any
 ): Promise<ExecutionResponse> {
   const startTime = performance.now();
+  const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(targetUrl);
+  const isPrivateIpUrl = /^https?:\/\/(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/i.test(targetUrl);
 
   try {
-    const fetchOptions: RequestInit = {
+    // Specify targetAddressSpace for Chrome's Private Network Access / Local Network Access permission
+    const fetchOptions: any = {
       method: method.toUpperCase(),
       headers: { ...headers },
     };
+
+    if (isLocalhostUrl) {
+      fetchOptions.targetAddressSpace = 'local';
+    } else if (isPrivateIpUrl) {
+      fetchOptions.targetAddressSpace = 'private';
+    }
 
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
       if (typeof body === 'object') {
@@ -184,6 +193,35 @@ export async function executeDirectClientFetch(
   } catch (err: any) {
     const endTime = performance.now();
     const duration = Math.round(endTime - startTime);
+
+    if (isLocalhostUrl || isPrivateIpUrl) {
+      return {
+        status: 0,
+        statusText: 'Local Network Access / CORS Blocked',
+        headers: {},
+        body: JSON.stringify(
+          {
+            error: `Cannot connect directly to local endpoint at ${targetUrl}`,
+            message: err?.message || 'Failed to fetch',
+            cause: 'Chrome enforces Private Network Access (PNA) and CORS when HTTPS web apps try to fetch from localhost or private network IPs.',
+            howChromePermissionWorks: [
+              '1. Click "Allow" if Chrome shows a "Local network devices and apps" permission prompt in the browser address bar.',
+              '2. Check Chrome Site Settings -> "Local network access" or "Insecure content" for this origin and set to "Allow".',
+              '3. Ensure your local server sends CORS headers: `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Private-Network: true`.',
+              '4. Or expose your local port with `ngrok http <port>` (e.g. https://xxxx.ngrok-free.app) for instant remote & local testing without browser restrictions.'
+            ],
+            browserError: err?.message || 'Failed to fetch (Permission denied for local network address space)',
+          },
+          null,
+          2
+        ),
+        size: 0,
+        duration,
+        timestamp: Date.now(),
+        ok: false,
+        error: 'Local network access blocked by browser Private Network Access policy or server CORS header missing',
+      };
+    }
 
     return {
       status: 0,
