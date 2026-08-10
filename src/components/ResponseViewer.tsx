@@ -450,13 +450,14 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
                 )}
 
                 <div className="pt-2 border-t border-slate-800/80 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">Instant 1-Line Workarounds for Local APIs:</div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">Instant Workarounds for Testing Local APIs:</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {/* Ngrok Tunnel Option */}
                     <div className="bg-slate-950 border border-slate-800 p-2.5 rounded-lg flex items-center justify-between">
                       <div className="space-y-0.5 min-w-0 pr-2">
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase block">Option A: Ngrok HTTPS Tunnel</span>
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase block">Option A: Ngrok HTTPS Tunnel (Recommended)</span>
                         <code className="text-[11px] text-slate-200 font-mono block truncate">npx ngrok http 3000</code>
+                        <span className="text-[10px] text-slate-400 block">Generates https:// url — works everywhere without browser restrictions</span>
                       </div>
                       <button
                         type="button"
@@ -470,7 +471,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
                             }
                           } catch {}
                           navigator.clipboard.writeText(`npx ngrok http ${port}`);
-                          setPermissionMsg(`Copied ngrok command: "npx ngrok http ${port}"`);
+                          setPermissionMsg(`Copied ngrok command: "npx ngrok http ${port}". Paste the resulting https:// URL in RestStudio.`);
                         }}
                         className="shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
                       >
@@ -481,8 +482,9 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
                     {/* Local CORS Proxy Option */}
                     <div className="bg-slate-950 border border-slate-800 p-2.5 rounded-lg flex items-center justify-between">
                       <div className="space-y-0.5 min-w-0 pr-2">
-                        <span className="text-[10px] font-bold text-sky-400 uppercase block">Option B: Local CORS Proxy</span>
-                        <code className="text-[11px] text-slate-200 font-mono block truncate">npx local-cors-proxy</code>
+                        <span className="text-[10px] font-bold text-sky-400 uppercase block">Option B: local-cors-proxy</span>
+                        <code className="text-[11px] text-slate-200 font-mono block truncate">npx local-cors-proxy --proxyUrl http://localhost:3000 --port 8010</code>
+                        <span className="text-[10px] text-amber-300 block font-mono">Important: Request URL MUST use /proxy/ path, e.g. http://localhost:8010/proxy/your-endpoint</span>
                       </div>
                       <button
                         type="button"
@@ -496,7 +498,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
                             }
                           } catch {}
                           navigator.clipboard.writeText(`npx local-cors-proxy --proxyUrl http://localhost:${port} --port 8010`);
-                          setPermissionMsg(`Copied proxy command for port ${port}`);
+                          setPermissionMsg(`Copied proxy command! Remember to format URL as: http://localhost:8010/proxy/your-endpoint`);
                         }}
                         className="shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
                       >

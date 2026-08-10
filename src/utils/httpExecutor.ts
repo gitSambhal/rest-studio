@@ -237,7 +237,14 @@ export async function executeDirectClientFetch(
   }
 
   try {
-    const res = await fetch(targetUrl, fetchOptions);
+    // If target URL is on local-cors-proxy default port (8010) and missing /proxy/ prefix, auto-format
+    let actualFetchUrl = targetUrl;
+    if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0):8010\/(?!proxy\/)/i.test(targetUrl)) {
+      actualFetchUrl = targetUrl.replace(/^(https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):8010)\/(?!proxy\/)?(.*)$/i, '$1/proxy/$2');
+      console.log(`[RestStudio] Auto-formatted local-cors-proxy URL to: ${actualFetchUrl}`);
+    }
+
+    const res = await fetch(actualFetchUrl, fetchOptions);
     const endTime = performance.now();
     const duration = Math.round(endTime - startTime);
 
@@ -265,7 +272,32 @@ export async function executeDirectClientFetch(
     const duration = Math.round(endTime - startTime);
 
     if (isLocalhostUrl || isPrivateIpUrl) {
-      // 1. Attempt Service Worker Proxy Bridge automatically as primary fallback
+      // 1. Try formatted /proxy/ URL if not tried yet
+      if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0):8010\//i.test(targetUrl) && !targetUrl.includes('/proxy/')) {
+        const proxyFormattedUrl = targetUrl.replace(/^(https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):8010)\/(.*)$/i, '$1/proxy/$2');
+        try {
+          console.log(`[RestStudio] Retrying with local-cors-proxy path: ${proxyFormattedUrl}`);
+          const pRes = await fetch(proxyFormattedUrl, fetchOptions);
+          const pText = await pRes.text();
+          const pHeaders: Record<string, string> = {};
+          pRes.headers.forEach((v, k) => { pHeaders[k] = v; });
+          return {
+            status: pRes.status,
+            statusText: pRes.statusText || 'OK',
+            headers: pHeaders,
+            body: pText,
+            size: new Blob([pText]).size,
+            duration: Math.round(performance.now() - startTime),
+            timestamp: Date.now(),
+            ok: pRes.ok,
+            contentType: pRes.headers.get('content-type') || 'text/plain',
+          };
+        } catch (pErr) {
+          console.warn('[RestStudio] Retry with /proxy/ path failed:', pErr);
+        }
+      }
+
+      // 2. Attempt Service Worker Proxy Bridge automatically as secondary fallback
       try {
         const swBridgeResult = await fetchViaServiceWorkerBridge(method, targetUrl, headers, body);
         if (swBridgeResult.success && swBridgeResult.response) {
