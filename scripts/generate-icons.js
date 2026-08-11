@@ -78,6 +78,39 @@ function createPngBuffer(width, height) {
   return Buffer.concat([sig, ihdrChunk, idatChunk, iendChunk]);
 }
 
+function createIcoFromPngs(pngImages) {
+  const count = pngImages.length;
+  const headerSize = 6;
+  const directorySize = 16 * count;
+  let currentOffset = headerSize + directorySize;
+
+  const header = Buffer.alloc(headerSize);
+  header.writeUInt16LE(0, 0); // Reserved
+  header.writeUInt16LE(1, 2); // ICO Type = 1
+  header.writeUInt16LE(count, 4); // Image Count
+
+  const entries = [];
+  const buffers = [];
+
+  pngImages.forEach(({ width, height, buffer }) => {
+    const entry = Buffer.alloc(16);
+    entry.writeUInt8(width >= 256 ? 0 : width, 0);
+    entry.writeUInt8(height >= 256 ? 0 : height, 1);
+    entry.writeUInt8(0, 2); // Color palette count (0 = no palette)
+    entry.writeUInt8(0, 3); // Reserved
+    entry.writeUInt16LE(1, 4); // Color Planes (1)
+    entry.writeUInt16LE(32, 6); // Bits per pixel (32)
+    entry.writeUInt32LE(buffer.length, 8); // Size of image data
+    entry.writeUInt32LE(currentOffset, 12); // Offset of image data
+
+    entries.push(entry);
+    buffers.push(buffer);
+    currentOffset += buffer.length;
+  });
+
+  return Buffer.concat([header, ...entries, ...buffers]);
+}
+
 // Generate all required Tauri and Neutralino icon sizes
 const iconsDir = path.resolve('src-tauri/icons');
 if (!fs.existsSync(iconsDir)) {
@@ -91,10 +124,13 @@ const sizes = [
   { name: 'icon.png', width: 512, height: 512 },
 ];
 
+const generatedPngs = [];
+
 sizes.forEach(({ name, width, height }) => {
   const pngBuf = createPngBuffer(width, height);
   const targetPath = path.join(iconsDir, name);
   fs.writeFileSync(targetPath, pngBuf);
+  generatedPngs.push({ width, height, buffer: pngBuf });
   console.log(`[Icon Generator] Created valid PNG: ${targetPath} (${width}x${height})`);
 });
 
@@ -102,6 +138,11 @@ sizes.forEach(({ name, width, height }) => {
 const rootPng = createPngBuffer(512, 512);
 fs.writeFileSync(path.resolve('icon.png'), rootPng);
 fs.writeFileSync(path.resolve('public/icon.png'), rootPng);
-fs.writeFileSync(path.resolve('src-tauri/icons/icon.ico'), rootPng);
 
-console.log('[Icon Generator] All icons successfully generated with valid PNG signatures!');
+// Create valid ICO file containing 32x32 and 256x256 icon images
+const png32 = generatedPngs.find(p => p.width === 32) || { width: 32, height: 32, buffer: createPngBuffer(32, 32) };
+const png256 = generatedPngs.find(p => p.width === 256) || { width: 256, height: 256, buffer: createPngBuffer(256, 256) };
+const icoBuf = createIcoFromPngs([png32, png256]);
+fs.writeFileSync(path.resolve('src-tauri/icons/icon.ico'), icoBuf);
+
+console.log('[Icon Generator] All icons and valid src-tauri/icons/icon.ico successfully generated!');
