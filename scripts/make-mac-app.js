@@ -177,13 +177,13 @@ if (fs.existsSync(binDir)) {
     fs.chmodSync(binaryTarget, 0o755);
 
     // 2. Create shell script launcher at Contents/MacOS/RestStudio
-    // Ensures current directory is always Contents/MacOS and strips quarantine flags automatically on launch
+    // Ensures current directory is always Contents/MacOS, passes --res-mode=bundle to load resources.neu, and strips quarantine flags automatically
     const launcherScript = `#!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 chmod +x "$DIR/RestStudio-bin" 2>/dev/null
 xattr -dr com.apple.quarantine "$DIR/../.." 2>/dev/null
-exec "$DIR/RestStudio-bin" "$@"
+exec "$DIR/RestStudio-bin" --res-mode=bundle "$@"
 `;
     const launcherPath = path.join(macOSDir, 'RestStudio');
     fs.writeFileSync(launcherPath, launcherScript, { mode: 0o755 });
@@ -262,11 +262,22 @@ exec "$DIR/RestStudio-bin" "$@"
     createZipWithPosixPermissions(appDir, zipPath);
     console.log(`[Mac App Bundler] Created POSIX 0755 macOS ZIP package: ${zipPath}`);
 
-    // 8. Create standalone Mac executable binary in dist/reststudio/
-    const standaloneBinPath = path.join(distRestStudioDir, binName);
-    fs.copyFileSync(binaryPath, standaloneBinPath);
-    fs.chmodSync(standaloneBinPath, 0o755);
-    console.log(`[Mac App Bundler] Created standalone Mac executable: ${standaloneBinPath}`);
+    // 8. Create standalone Mac executable binary & launcher in dist/reststudio/
+    const actualBinPath = path.join(distRestStudioDir, `${binName}-bin`);
+    fs.copyFileSync(binaryPath, actualBinPath);
+    fs.chmodSync(actualBinPath, 0o755);
+
+    const standaloneLauncherScript = `#!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$DIR"
+chmod +x "$DIR/${binName}-bin" 2>/dev/null
+xattr -dr com.apple.quarantine "$DIR/.." 2>/dev/null
+exec "$DIR/${binName}-bin" --res-mode=bundle "$@"
+`;
+    const standaloneLauncherPath = path.join(distRestStudioDir, binName);
+    fs.writeFileSync(standaloneLauncherPath, standaloneLauncherScript, { mode: 0o755 });
+    fs.chmodSync(standaloneLauncherPath, 0o755);
+    console.log(`[Mac App Bundler] Created standalone Mac launcher executable: ${standaloneLauncherPath}`);
 
     totalCreated++;
   });
