@@ -6,3 +6,13 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Tauri build outputs & Rust binaries
+src-tauri/target/
+src-tauri/gen/
+
+# Neutralino build outputs & temporary files
+bin/
+.neutralino/
+*.neu
+
