@@ -103,10 +103,156 @@ export async function writeClipboardText(text: string): Promise<boolean> {
 
 /**
  * Initialize global clipboard handlers
- * Modern WebViews (WebView2, WebKit, Neutralino, Tauri) handle Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A on HTML inputs natively.
- * We avoid intercepting keydown on inputs/textareas to prevent double pasting or interfering with OS clipboard pipelines.
+ * Ensures Cmd+A (Select All), Cmd+C (Copy), Cmd+X (Cut), Cmd+V (Paste), Cmd+Z (Undo), Cmd+Shift+Z / Cmd+Y (Redo)
+ * work reliably in macOS WKWebView (Neutralino/Tauri/Browser) and Windows/Linux.
  */
 export function initDesktopClipboardHandlers() {
-  // Native input/textarea copy-paste is handled cleanly by OS WebView
-  return;
+  if (typeof window === 'undefined') return;
+
+  // Keydown shortcut handler (capture phase)
+  window.addEventListener(
+    'keydown',
+    async (e: KeyboardEvent) => {
+      // Check if Command (macOS e.metaKey) or Ctrl (Windows/Linux e.ctrlKey) is pressed
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      if (!isCmdOrCtrl) return;
+
+      const key = e.key ? e.key.toLowerCase() : '';
+      const activeEl = document.activeElement as HTMLElement | null;
+      const isInputOrTextarea =
+        activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+      const isContentEditable = activeEl && (activeEl.isContentEditable || activeEl.getAttribute('contenteditable') === 'true');
+      const isEditable = isInputOrTextarea || isContentEditable;
+
+      // 1. SELECT ALL (Cmd+A / Ctrl+A)
+      if (key === 'a') {
+        if (isInputOrTextarea) {
+          (activeEl as HTMLInputElement | HTMLTextAreaElement).select();
+          e.preventDefault();
+        } else if (isContentEditable) {
+          try {
+            document.execCommand('selectAll', false);
+          } catch (_) {}
+          e.preventDefault();
+        } else {
+          try {
+            const selection = window.getSelection();
+            if (selection && document.body) {
+              const range = document.createRange();
+              range.selectNodeContents(document.body);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+          } catch (_) {}
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // 2. COPY (Cmd+C / Ctrl+C)
+      if (key === 'c') {
+        let selectedText = '';
+        if (isInputOrTextarea) {
+          const input = activeEl as HTMLInputElement | HTMLTextAreaElement;
+          const start = input.selectionStart ?? 0;
+          const end = input.selectionEnd ?? 0;
+          if (start !== end) {
+            selectedText = input.value.substring(start, end);
+          }
+        } else {
+          selectedText = window.getSelection()?.toString() || '';
+        }
+
+        if (selectedText) {
+          e.preventDefault();
+          writeClipboardText(selectedText);
+        }
+        return;
+      }
+
+      // 3. CUT (Cmd+X / Ctrl+X)
+      if (key === 'x') {
+        if (!isEditable) return;
+
+        if (isInputOrTextarea) {
+          const input = activeEl as HTMLInputElement | HTMLTextAreaElement;
+          if (input.readOnly || input.disabled) return;
+
+          const start = input.selectionStart ?? 0;
+          const end = input.selectionEnd ?? 0;
+          if (start !== end) {
+            e.preventDefault();
+            const selectedText = input.value.substring(start, end);
+            writeClipboardText(selectedText);
+            const val = input.value;
+            const newVal = val.substring(0, start) + val.substring(end);
+            setNativeInputValue(input, newVal);
+            input.setSelectionRange(start, start);
+          }
+        } else if (isContentEditable) {
+          const selectedText = window.getSelection()?.toString() || '';
+          if (selectedText) {
+            e.preventDefault();
+            writeClipboardText(selectedText);
+            try {
+              document.execCommand('delete', false);
+            } catch (_) {}
+          }
+        }
+        return;
+      }
+
+      // 4. PASTE (Cmd+V / Ctrl+V)
+      if (key === 'v') {
+        if (!isEditable) return;
+
+        if (isInputOrTextarea) {
+          const input = activeEl as HTMLInputElement | HTMLTextAreaElement;
+          if (input.readOnly || input.disabled) return;
+
+          e.preventDefault(); // Prevent default synchronously
+          const text = await readClipboardText();
+          if (text) {
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            const val = input.value;
+            const newVal = val.substring(0, start) + text + val.substring(end);
+            setNativeInputValue(input, newVal);
+            const newPos = start + text.length;
+            input.setSelectionRange(newPos, newPos);
+          }
+        } else if (isContentEditable) {
+          e.preventDefault(); // Prevent default synchronously
+          const text = await readClipboardText();
+          if (text) {
+            try {
+              document.execCommand('insertText', false, text);
+            } catch (_) {}
+          }
+        }
+        return;
+      }
+
+      // 5. UNDO (Cmd+Z / Ctrl+Z)
+      if (key === 'z' && !e.shiftKey) {
+        if (isEditable) {
+          try {
+            document.execCommand('undo');
+          } catch (_) {}
+        }
+        return;
+      }
+
+      // 6. REDO (Cmd+Shift+Z / Cmd+Y / Ctrl+Y / Ctrl+Shift+Z)
+      if ((key === 'z' && e.shiftKey) || key === 'y') {
+        if (isEditable) {
+          try {
+            document.execCommand('redo');
+          } catch (_) {}
+        }
+        return;
+      }
+    },
+    true // Capture phase to handle events before child stopPropagation
+  );
 }
