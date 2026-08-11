@@ -2,47 +2,59 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-const binDir = path.resolve('bin');
+/**
+ * Creates native macOS .app bundles for Neutralino build targets.
+ * Packaging inside a .app bundle prevents macOS from opening Terminal.app when the user double-clicks the application.
+ */
 
-if (!fs.existsSync(binDir)) {
-  console.log('[Mac App Bundler] bin directory does not exist, skipping.');
-  process.exit(0);
-}
-
-const targets = [
-  { name: 'RestStudio-ARM64.app', binary: 'reststudio-mac_arm64' },
-  { name: 'RestStudio-x64.app', binary: 'reststudio-mac_x64' },
-  { name: 'RestStudio-Universal.app', binary: 'reststudio-mac_universal' },
+// Look for binaries in dist/reststudio first, then bin/
+const searchDirs = [
+  path.resolve('dist/reststudio'),
+  path.resolve('bin'),
 ];
 
-let created = 0;
+const targets = [
+  { appName: 'RestStudio-Mac-ARM64.app', binary: 'reststudio-mac_arm64' },
+  { appName: 'RestStudio-Mac-x64.app', binary: 'reststudio-mac_x64' },
+  { appName: 'RestStudio-Mac-Universal.app', binary: 'reststudio-mac_universal' },
+];
 
-targets.forEach(({ name, binary }) => {
-  const binaryPath = path.join(binDir, binary);
-  if (!fs.existsSync(binaryPath)) return;
+let totalCreated = 0;
 
-  const appDir = path.join(binDir, name);
-  const contentsDir = path.join(appDir, 'Contents');
-  const macOSDir = path.join(contentsDir, 'MacOS');
-  const resourcesDir = path.join(contentsDir, 'Resources');
+searchDirs.forEach((searchDir) => {
+  if (!fs.existsSync(searchDir)) return;
 
-  fs.mkdirSync(macOSDir, { recursive: true });
-  fs.mkdirSync(resourcesDir, { recursive: true });
+  const resNeuPath = path.join(searchDir, 'resources.neu');
 
-  // Copy target binary and resources.neu into Contents/MacOS
-  fs.copyFileSync(binaryPath, path.join(macOSDir, binary));
-  const resNeu = path.join(binDir, 'resources.neu');
-  if (fs.existsSync(resNeu)) {
-    fs.copyFileSync(resNeu, path.join(macOSDir, 'resources.neu'));
-  }
+  targets.forEach(({ appName, binary }) => {
+    const binaryPath = path.join(searchDir, binary);
+    if (!fs.existsSync(binaryPath)) return;
 
-  // Copy icon
-  if (fs.existsSync('public/icon.png')) {
-    fs.copyFileSync('public/icon.png', path.join(resourcesDir, 'icon.png'));
-  }
+    const appDir = path.join(searchDir, appName);
+    const contentsDir = path.join(appDir, 'Contents');
+    const macOSDir = path.join(contentsDir, 'MacOS');
+    const resourcesDir = path.join(contentsDir, 'Resources');
 
-  // Write Info.plist
-  const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
+    fs.mkdirSync(macOSDir, { recursive: true });
+    fs.mkdirSync(resourcesDir, { recursive: true });
+
+    // 1. Copy executable binary to Contents/MacOS
+    fs.copyFileSync(binaryPath, path.join(macOSDir, binary));
+
+    // 2. Copy resources.neu into Contents/MacOS next to binary
+    if (fs.existsSync(resNeuPath)) {
+      fs.copyFileSync(resNeuPath, path.join(macOSDir, 'resources.neu'));
+    } else if (fs.existsSync(path.resolve('dist/reststudio/resources.neu'))) {
+      fs.copyFileSync(path.resolve('dist/reststudio/resources.neu'), path.join(macOSDir, 'resources.neu'));
+    }
+
+    // 3. Copy icon
+    if (fs.existsSync('public/icon.png')) {
+      fs.copyFileSync('public/icon.png', path.join(resourcesDir, 'icon.png'));
+    }
+
+    // 4. Create Info.plist (Native GUI app declaration)
+    const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -52,6 +64,10 @@ targets.forEach(({ name, binary }) => {
     <string>top.suhail.rest-studio</string>
     <key>CFBundleName</key>
     <string>RestStudio</string>
+    <key>CFBundleDisplayName</key>
+    <string>RestStudio</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.png</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -63,18 +79,19 @@ targets.forEach(({ name, binary }) => {
 </dict>
 </plist>`;
 
-  fs.writeFileSync(path.join(contentsDir, 'Info.plist'), plistContent);
+    fs.writeFileSync(path.join(contentsDir, 'Info.plist'), plistContent);
 
-  // Set executable bit and clear quarantine attribute so double clicking works instantly
-  try {
-    execSync(`chmod +x "${path.join(macOSDir, binary)}"`);
-    execSync(`xattr -cr "${appDir}" 2>/dev/null || true`);
-  } catch (_) {}
+    // 5. Grant execute permissions and clear gatekeeper quarantine flag
+    try {
+      execSync(`chmod +x "${path.join(macOSDir, binary)}"`);
+      execSync(`xattr -cr "${appDir}" 2>/dev/null || true`);
+    } catch (_) {}
 
-  console.log(`[Mac App Bundler] Created native macOS App bundle: bin/${name}`);
-  created++;
+    console.log(`[Mac App Bundler] Created native macOS App bundle: ${appDir}`);
+    totalCreated++;
+  });
 });
 
-if (created === 0) {
-  console.log('[Mac App Bundler] No macOS binaries found in bin/ to bundle.');
+if (totalCreated === 0) {
+  console.log('[Mac App Bundler] No macOS binaries found to bundle into .app packages.');
 }
