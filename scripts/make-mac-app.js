@@ -12,15 +12,12 @@ import { execSync } from 'child_process';
  */
 
 const distRestStudioDir = path.resolve('dist/reststudio');
-const searchDirs = [
-  distRestStudioDir,
-  path.resolve('bin'),
-];
+const binDir = path.resolve('bin');
 
 const targets = [
-  { appName: 'RestStudio-Mac-ARM64.app', zipName: 'RestStudio-Mac-ARM64.zip', binName: 'RestStudio-Mac-ARM64', binary: 'reststudio-mac_arm64' },
-  { appName: 'RestStudio-Mac-x64.app', zipName: 'RestStudio-Mac-x64.zip', binName: 'RestStudio-Mac-x64', binary: 'reststudio-mac_x64' },
-  { appName: 'RestStudio-Mac-Universal.app', zipName: 'RestStudio-Mac-Universal.zip', binName: 'RestStudio-Mac-Universal', binary: 'reststudio-mac_universal' },
+  { appName: 'RestStudio-Mac-ARM64.app', zipName: 'RestStudio-Mac-ARM64.zip', binName: 'RestStudio-Mac-ARM64', binary: 'neutralino-mac_arm64' },
+  { appName: 'RestStudio-Mac-x64.app', zipName: 'RestStudio-Mac-x64.zip', binName: 'RestStudio-Mac-x64', binary: 'neutralino-mac_x64' },
+  { appName: 'RestStudio-Mac-Universal.app', zipName: 'RestStudio-Mac-Universal.zip', binName: 'RestStudio-Mac-Universal', binary: 'neutralino-mac_universal' },
 ];
 
 function crc32(buf) {
@@ -160,11 +157,9 @@ function createZipWithPosixPermissions(sourceDir, zipFilePath) {
 
 let totalCreated = 0;
 
-searchDirs.forEach((searchDir) => {
-  if (!fs.existsSync(searchDir)) return;
-
+if (fs.existsSync(binDir)) {
   targets.forEach(({ appName, zipName, binName, binary }) => {
-    const binaryPath = path.join(searchDir, binary);
+    const binaryPath = path.join(binDir, binary);
     if (!fs.existsSync(binaryPath)) return;
 
     const appDir = path.join(distRestStudioDir, appName);
@@ -176,7 +171,7 @@ searchDirs.forEach((searchDir) => {
     fs.mkdirSync(macOSDir, { recursive: true });
     fs.mkdirSync(resourcesDir, { recursive: true });
 
-    // 1. Copy native Neutralino binary to Contents/MacOS/RestStudio-bin
+    // 1. Copy pristine native Neutralino binary to Contents/MacOS/RestStudio-bin
     const binaryTarget = path.join(macOSDir, 'RestStudio-bin');
     fs.copyFileSync(binaryPath, binaryTarget);
     fs.chmodSync(binaryTarget, 0o755);
@@ -197,7 +192,6 @@ exec "$DIR/RestStudio-bin" "$@"
     // 3. Copy resources.neu if present
     const resNeuPaths = [
       path.join(distRestStudioDir, 'resources.neu'),
-      path.join(searchDir, 'resources.neu'),
       path.resolve('resources.neu'),
       path.resolve('.neu/resources.neu'),
     ];
@@ -276,7 +270,7 @@ exec "$DIR/RestStudio-bin" "$@"
 
     totalCreated++;
   });
-});
+}
 
 // Clean up raw binary files
 if (fs.existsSync(distRestStudioDir)) {

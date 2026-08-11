@@ -80,7 +80,6 @@ if (fs.existsSync(distDir)) {
 
   // 3. Clean up raw temporary build files in dist/reststudio
   const filesToDelete = [
-    'resources.neu',
     'reststudio-win_x64.exe',
     'reststudio-win_x86.exe',
     'reststudio-win_arm64.exe',
