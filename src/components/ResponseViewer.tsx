@@ -370,7 +370,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
       </div>
 
       {/* Tab Content Body */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-3 select-text">
         {activeTab === 'pretty' && (
           <div className="space-y-3">
             <pre className="p-3 bg-slate-900/80 border border-slate-800/80 rounded-xl font-mono text-xs text-slate-200 overflow-x-auto leading-relaxed select-text">

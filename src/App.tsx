@@ -1484,7 +1484,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-950 via-[#0b1220] to-[#0f172a] text-slate-100 font-sans overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-950 via-[#0b1220] to-[#0f172a] text-slate-100 font-sans overflow-hidden">
       {/* Top Header */}
       <Header
         organizations={organizations}

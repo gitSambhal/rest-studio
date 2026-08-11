@@ -12,7 +12,8 @@
     "app.*",
     "window.*",
     "filesystem.*",
-    "storage.*"
+    "storage.*",
+    "clipboard.*"
   ],
   "modes": {
     "window": {

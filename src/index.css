@@ -5,6 +5,27 @@
 }
 
 /* 1. Base Canvas and Page Backgrounds - Modern Subtle Gradient */
+/* Explicit Text Selection & Clipboard Input Support */
+input,
+textarea,
+[contenteditable="true"],
+pre,
+code,
+.select-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+::selection {
+  background-color: rgba(16, 185, 129, 0.35); /* emerald highlight */
+  color: #6ee7b7;
+}
+
+.light-theme ::selection {
+  background-color: rgba(16, 185, 129, 0.25);
+  color: #047857;
+}
+
 body {
   background: radial-gradient(ellipse at 80% 0%, rgba(16, 185, 129, 0.07), transparent 50%),
               radial-gradient(ellipse at 10% 90%, rgba(56, 189, 248, 0.07), transparent 50%),
