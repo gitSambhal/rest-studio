@@ -177,13 +177,13 @@ if (fs.existsSync(binDir)) {
     fs.chmodSync(binaryTarget, 0o755);
 
     // 2. Create shell script launcher at Contents/MacOS/RestStudio
-    // Ensures current directory is always Contents/MacOS, passes --res-mode=bundle to load resources.neu, and strips quarantine flags automatically
+    // Ensures current directory is always Contents/MacOS, passes --res-mode=bundle and --path="$DIR" to load resources.neu, and strips quarantine flags automatically
     const launcherScript = `#!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 chmod +x "$DIR/RestStudio-bin" 2>/dev/null
 xattr -dr com.apple.quarantine "$DIR/../.." 2>/dev/null
-exec "$DIR/RestStudio-bin" --res-mode=bundle "$@"
+exec "$DIR/RestStudio-bin" --res-mode=bundle --path="$DIR" "$@"
 `;
     const launcherPath = path.join(macOSDir, 'RestStudio');
     fs.writeFileSync(launcherPath, launcherScript, { mode: 0o755 });
@@ -195,12 +195,18 @@ exec "$DIR/RestStudio-bin" --res-mode=bundle "$@"
       path.resolve('resources.neu'),
       path.resolve('.neu/resources.neu'),
     ];
+    let copiedResNeu = false;
     for (const rPath of resNeuPaths) {
       if (fs.existsSync(rPath)) {
         fs.copyFileSync(rPath, path.join(macOSDir, 'resources.neu'));
         fs.copyFileSync(rPath, path.join(resourcesDir, 'resources.neu'));
+        copiedResNeu = true;
+        console.log(`[Mac App Bundler] Successfully copied resources.neu (${fs.statSync(rPath).size} bytes) to ${appName} bundle.`);
         break;
       }
+    }
+    if (!copiedResNeu) {
+      console.warn(`[Mac App Bundler] WARNING: resources.neu NOT found in any search path for ${appName}!`);
     }
 
     // 4. Copy icon
@@ -272,7 +278,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 chmod +x "$DIR/${binName}-bin" 2>/dev/null
 xattr -dr com.apple.quarantine "$DIR/.." 2>/dev/null
-exec "$DIR/${binName}-bin" --res-mode=bundle "$@"
+exec "$DIR/${binName}-bin" --res-mode=bundle --path="$DIR" "$@"
 `;
     const standaloneLauncherPath = path.join(distRestStudioDir, binName);
     fs.writeFileSync(standaloneLauncherPath, standaloneLauncherScript, { mode: 0o755 });
