@@ -1,40 +1,30 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RestStudio",
+  "version": "1.0.0",
+  "identifier": "top.suhail.rest-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:3000",
-    "distDir": "../dist"
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "RestStudio",
-    "version": "1.0.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "http": {
-        "all": true,
-        "request": true,
-        "scope": ["http://**", "https://**"]
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "identifier": "top.suhail.rest-studio",
-      "targets": "all"
-    },
-    "security": {
-      "csp": null
-    },
+  "app": {
     "windows": [
       {
-        "fullscreen": false,
-        "height": 850,
-        "resizable": true,
         "title": "RestStudio - Ultra Lightweight API Client",
-        "width": 1300
+        "width": 1300,
+        "height": 850,
+        "resizable": true
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "targets": "all"
   }
 }

@@ -1,8 +1,10 @@
 {
   "applicationId": "top.suhail.rest-studio",
+  "version": "1.0.0",
   "defaultMode": "window",
   "port": 0,
   "url": "/",
+  "documentRoot": "/dist/",
   "enableServer": true,
   "enableLsp": false,
   "modes": {
@@ -22,6 +24,9 @@
   "cli": {
     "binaryName": "reststudio",
     "resourcesPath": "/dist/",
-    "extensionsPath": "/extensions/"
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/dist/js/neutralino.js",
+    "binaryVersion": "5.6.0",
+    "clientVersion": "5.6.0"
   }
 }
