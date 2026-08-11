@@ -35,8 +35,8 @@
     "resourcesPath": "/dist/",
     "extensionsPath": "/extensions/",
     "clientLibrary": "/js/neutralino.js",
-    "binaryVersion": "5.6.0",
-    "clientVersion": "5.6.0",
+    "binaryVersion": "6.3.0",
+    "clientVersion": "6.3.0",
     "icon": "icon.png"
   }
 }
