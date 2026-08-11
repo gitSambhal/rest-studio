@@ -36,6 +36,6 @@
     "clientLibrary": "/js/neutralino.js",
     "binaryVersion": "5.6.0",
     "clientVersion": "5.6.0",
-    "icon": "/public/icon.png"
+    "icon": "icon.png"
   }
 }

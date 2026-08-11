@@ -15,8 +15,7 @@
         "title": "RestStudio - Ultra Lightweight API Client",
         "width": 1300,
         "height": 850,
-        "resizable": true,
-        "icon": "icons/32x32.png"
+        "resizable": true
       }
     ],
     "security": {
