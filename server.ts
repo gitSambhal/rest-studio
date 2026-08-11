@@ -27,6 +27,11 @@ async function startServer() {
     res.json({ status: 'ok', service: 'RestStudio API Proxy' });
   });
 
+  // Return JS stub for Neutralino client library in web browser preview mode to prevent HTML 404 syntax error
+  app.get(['/js/neutralino.js', '/dist/js/neutralino.js'], (req, res) => {
+    res.type('application/javascript').send('/* Neutralino JS stub for web browser preview */');
+  });
+
   // REST Request Proxy Endpoint - Uses Axios on server to bypass Browser CORS for ALL external APIs
   app.post('/api/proxy', async (req, res) => {
     const { method = 'GET', url, headers = {}, body } = req.body;

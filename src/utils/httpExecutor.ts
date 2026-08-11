@@ -20,6 +20,10 @@ async function executeNeutralinoFetch(
   const neu = (window as any).Neutralino;
   const startTime = performance.now();
 
+  if (neu && typeof neu.init === 'function') {
+    try { neu.init(); } catch (_) {}
+  }
+
   // 1. Try Neutralino OS execCommand with native curl (0 CORS/PNA restrictions)
   if (neu && neu.os && typeof neu.os.execCommand === 'function') {
     try {
@@ -27,7 +31,9 @@ async function executeNeutralinoFetch(
       if (headers && typeof headers === 'object') {
         Object.entries(headers).forEach(([k, v]) => {
           if (k && v !== undefined && v !== null) {
-            headerArgs += ` -H "${k.replace(/"/g, '\\"')}: ${String(v).replace(/"/g, '\\"')}"`;
+            const cleanK = String(k).replace(/"/g, '\\"');
+            const cleanV = String(v).replace(/"/g, '\\"');
+            headerArgs += ` -H "${cleanK}: ${cleanV}"`;
           }
         });
       }
@@ -35,12 +41,12 @@ async function executeNeutralinoFetch(
       let bodyArg = '';
       if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
         const bodyStr = typeof body === 'object' ? JSON.stringify(body) : String(body);
-        bodyArg = ` -d ${JSON.stringify(bodyStr)}`;
+        bodyArg = ` --data-raw ${JSON.stringify(bodyStr)}`;
       }
 
-      // -i includes response headers, -s suppresses progress meter, -S shows errors
-      const curlCmd = `curl -i -s -S -X ${method.toUpperCase()}${headerArgs}${bodyArg} "${targetUrl.replace(/"/g, '\\"')}"`;
-      console.log('[RestStudio Neutralino] Executing native OS curl command...');
+      const cleanUrl = targetUrl.replace(/"/g, '\\"');
+      const curlCmd = `curl -i -s -S -m 30 -X ${method.toUpperCase()}${headerArgs}${bodyArg} "${cleanUrl}"`;
+      console.log('[RestStudio Neutralino] Executing native OS curl command:', curlCmd);
 
       const execResult = await neu.os.execCommand(curlCmd);
       if (execResult && typeof execResult.stdOut === 'string' && execResult.stdOut.trim()) {
@@ -49,10 +55,11 @@ async function executeNeutralinoFetch(
 
         // Parse response status, headers, and body
         const headerBodySplit = rawOutput.split(/\r?\n\r?\n/);
-        const rawHeaders = headerBodySplit[0] || '';
-        const responseBody = headerBodySplit.slice(1).join('\r\n\r\n') || '';
+        const lastHeaderIdx = headerBodySplit.length > 1 ? headerBodySplit.length - 2 : 0;
+        const rawHeaders = headerBodySplit[lastHeaderIdx] || headerBodySplit[0] || '';
+        const responseBody = headerBodySplit.slice(lastHeaderIdx + 1).join('\r\n\r\n') || '';
 
-        const statusMatch = rawHeaders.match(/HTTP\/\d\.\d\s+(\d+)\s*(.*)/i);
+        const statusMatch = rawHeaders.match(/HTTP\/\d(?:\.\d)?\s+(\d+)\s*(.*)/i);
         const status = statusMatch ? parseInt(statusMatch[1], 10) : 200;
         const statusText = statusMatch ? statusMatch[2].trim() : 'OK';
 
