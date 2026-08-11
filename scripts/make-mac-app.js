@@ -41,11 +41,11 @@ searchDirs.forEach((searchDir) => {
     // 1. Copy executable binary to Contents/MacOS
     fs.copyFileSync(binaryPath, path.join(macOSDir, binary));
 
-    // 2. Copy resources.neu into Contents/MacOS next to binary
-    if (fs.existsSync(resNeuPath)) {
-      fs.copyFileSync(resNeuPath, path.join(macOSDir, 'resources.neu'));
-    } else if (fs.existsSync(path.resolve('dist/reststudio/resources.neu'))) {
-      fs.copyFileSync(path.resolve('dist/reststudio/resources.neu'), path.join(macOSDir, 'resources.neu'));
+    // 2. Copy resources.neu into Contents/MacOS and Contents/Resources next to binary
+    const activeResNeu = fs.existsSync(resNeuPath) ? resNeuPath : path.resolve('dist/reststudio/resources.neu');
+    if (fs.existsSync(activeResNeu)) {
+      fs.copyFileSync(activeResNeu, path.join(macOSDir, 'resources.neu'));
+      fs.copyFileSync(activeResNeu, path.join(resourcesDir, 'resources.neu'));
     }
 
     // 3. Copy icon
