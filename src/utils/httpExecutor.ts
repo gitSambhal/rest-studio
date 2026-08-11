@@ -54,6 +54,57 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
 
   const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(targetUrl);
 
+  // 0a. Check if running inside Tauri (Rust Native Lightweight App ~3MB)
+  if (typeof window !== 'undefined' && ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI_IPC__)) {
+    try {
+      console.log('[RestStudio Tauri] Executing via Tauri Native Rust Engine...');
+      const tauriFetch = (window as any).__TAURI__?.http?.fetch || fetch;
+      const startTime = performance.now();
+      const res = await tauriFetch(targetUrl, {
+        method: method.toUpperCase(),
+        headers,
+        body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body ? (typeof body === 'object' ? JSON.stringify(body) : String(body)) : undefined,
+      });
+      const duration = Math.round(performance.now() - startTime);
+      const text = await res.text();
+      const resHeaders: Record<string, string> = {};
+      if (res.headers && typeof res.headers.forEach === 'function') {
+        res.headers.forEach((v: string, k: string) => { resHeaders[k] = v; });
+      }
+      return {
+        status: res.status,
+        statusText: res.statusText || 'OK',
+        headers: resHeaders,
+        body: text,
+        size: new Blob([text]).size,
+        duration,
+        timestamp: Date.now(),
+        ok: res.ok,
+        contentType: res.headers?.get('content-type') || 'text/plain',
+      };
+    } catch (tErr) {
+      console.warn('[RestStudio Tauri] Native Tauri execution error, falling back:', tErr);
+    }
+  }
+
+  // 0b. Check if running inside Electron Native Desktop Container!
+  if (typeof window !== 'undefined' && (window as any).electronAPI?.isElectron) {
+    try {
+      console.log('[RestStudio Desktop] Executing via Electron Native Node HTTP Engine...');
+      const electronRes = await (window as any).electronAPI.executeRequest({
+        method,
+        url: targetUrl,
+        headers,
+        body,
+      });
+      if (electronRes) {
+        return electronRes;
+      }
+    } catch (e) {
+      console.warn('[RestStudio Desktop] Native Electron execution error, falling back to web pipeline:', e);
+    }
+  }
+
   // Retrieve user settings from localStorage
   const requestMode = localStorage.getItem('reststudio_request_mode') || 'auto'; // 'auto' | 'direct' | 'proxy'
   const customProxyUrl = localStorage.getItem('reststudio_custom_proxy_url') || '';

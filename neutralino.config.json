@@ -1,0 +1,27 @@
+{
+  "applicationId": "top.suhail.rest-studio",
+  "defaultMode": "window",
+  "port": 0,
+  "url": "/",
+  "enableServer": true,
+  "enableLsp": false,
+  "modes": {
+    "window": {
+      "title": "RestStudio - Ultra Lightweight API Client",
+      "width": 1300,
+      "height": 850,
+      "minWidth": 900,
+      "minHeight": 600,
+      "center": true,
+      "resizable": true,
+      "maximizable": true,
+      "hidden": false,
+      "exitProcessOnClose": true
+    }
+  },
+  "cli": {
+    "binaryName": "reststudio",
+    "resourcesPath": "/dist/",
+    "extensionsPath": "/extensions/"
+  }
+}

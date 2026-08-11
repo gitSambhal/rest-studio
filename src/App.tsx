@@ -31,6 +31,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { PromptModal } from './components/PromptModal';
 import { QuickNewRequestModal } from './components/QuickNewRequestModal';
 import { QuickCurlModal } from './components/QuickCurlModal';
+import { DesktopAppModal } from './components/DesktopAppModal';
 import { TabBar } from './components/TabBar';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { ToastContainer, ToastMessage } from './components/ToastContainer';
@@ -208,6 +209,7 @@ export default function App() {
   const [isImportExportOpen, setIsImportExportOpen] = useState<boolean>(false);
   const [isQuickHelpOpen, setIsQuickHelpOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isDesktopModalOpen, setIsDesktopModalOpen] = useState<boolean>(false);
   const [isQuickNewRequestOpen, setIsQuickNewRequestOpen] = useState<boolean>(false);
   const [isQuickCurlOpen, setIsQuickCurlOpen] = useState<boolean>(false);
   const [initialPasteText, setInitialPasteText] = useState<string>('');
@@ -1517,6 +1519,7 @@ export default function App() {
         onOpenImportExport={() => setIsImportExportOpen(true)}
         onOpenQuickHelp={() => setIsQuickHelpOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenDesktopModal={() => setIsDesktopModalOpen(true)}
         onOpenQuickNewRequest={() => setIsQuickNewRequestOpen(true)}
         onOpenQuickCurl={() => setIsQuickCurlOpen(true)}
         historyCount={history.length}
@@ -1848,6 +1851,13 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         showToast={showToast}
+      />
+
+      {/* Desktop App Conversion Modal */}
+      <DesktopAppModal
+        isOpen={isDesktopModalOpen}
+        onClose={() => setIsDesktopModalOpen(false)}
+        isDarkMode={isDarkMode}
       />
 
       {/* Global App Prompt Modal */}
