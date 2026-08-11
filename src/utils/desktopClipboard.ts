@@ -102,97 +102,11 @@ export async function writeClipboardText(text: string): Promise<boolean> {
 }
 
 /**
- * Initialize global keyboard listeners for Cmd/Ctrl + C, V, X, A
- * This explicitly ensures Neutralino and WebViews handle copy, paste, cut, and select all on inputs, textareas, and selectable response text!
+ * Initialize global clipboard handlers
+ * Modern WebViews (WebView2, WebKit, Neutralino, Tauri) handle Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A on HTML inputs natively.
+ * We avoid intercepting keydown on inputs/textareas to prevent double pasting or interfering with OS clipboard pipelines.
  */
 export function initDesktopClipboardHandlers() {
-  if (typeof window === 'undefined') return;
-
-  const handleKeyDown = async (e: KeyboardEvent) => {
-    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
-    if (!isCmdOrCtrl) return;
-
-    const key = e.key ? e.key.toLowerCase() : '';
-    const activeEl = document.activeElement as HTMLElement | null;
-    const isInputOrTextarea = !!(
-      activeEl && (
-        activeEl.tagName === 'INPUT' || 
-        activeEl.tagName === 'TEXTAREA' || 
-        activeEl.isContentEditable
-      )
-    );
-
-    // --- PASTE (Cmd+V / Ctrl+V) ---
-    if (key === 'v') {
-      if (isInputOrTextarea && activeEl) {
-        const pastedText = await readClipboardText();
-        if (pastedText) {
-          e.preventDefault();
-          if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') {
-            const inputEl = activeEl as HTMLInputElement | HTMLTextAreaElement;
-            const start = inputEl.selectionStart ?? inputEl.value.length;
-            const end = inputEl.selectionEnd ?? inputEl.value.length;
-            const currentVal = inputEl.value || '';
-            const newVal = currentVal.substring(0, start) + pastedText + currentVal.substring(end);
-            
-            setNativeInputValue(inputEl, newVal);
-            inputEl.selectionStart = inputEl.selectionEnd = start + pastedText.length;
-          } else if (activeEl.isContentEditable) {
-            document.execCommand('insertText', false, pastedText);
-          }
-        }
-      }
-    }
-
-    // --- COPY (Cmd+C / Ctrl+C) ---
-    if (key === 'c') {
-      let textToCopy = '';
-      if (isInputOrTextarea && (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA')) {
-        const inputEl = activeEl as HTMLInputElement | HTMLTextAreaElement;
-        const start = inputEl.selectionStart ?? 0;
-        const end = inputEl.selectionEnd ?? 0;
-        if (start !== end) {
-          textToCopy = inputEl.value.substring(start, end);
-        }
-      } else {
-        const selection = window.getSelection();
-        if (selection && selection.toString()) {
-          textToCopy = selection.toString();
-        }
-      }
-
-      if (textToCopy) {
-        e.preventDefault();
-        await writeClipboardText(textToCopy);
-      }
-    }
-
-    // --- CUT (Cmd+X / Ctrl+X) ---
-    if (key === 'x') {
-      if (isInputOrTextarea && (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA')) {
-        const inputEl = activeEl as HTMLInputElement | HTMLTextAreaElement;
-        const start = inputEl.selectionStart ?? 0;
-        const end = inputEl.selectionEnd ?? 0;
-        if (start !== end) {
-          e.preventDefault();
-          const textToCut = inputEl.value.substring(start, end);
-          await writeClipboardText(textToCut);
-          const currentVal = inputEl.value || '';
-          const newVal = currentVal.substring(0, start) + currentVal.substring(end);
-          setNativeInputValue(inputEl, newVal);
-          inputEl.selectionStart = inputEl.selectionEnd = start;
-        }
-      }
-    }
-
-    // --- SELECT ALL (Cmd+A / Ctrl+A) ---
-    if (key === 'a') {
-      if (isInputOrTextarea && (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA')) {
-        e.preventDefault();
-        (activeEl as HTMLInputElement | HTMLTextAreaElement).select();
-      }
-    }
-  };
-
-  window.addEventListener('keydown', handleKeyDown, true);
+  // Native input/textarea copy-paste is handled cleanly by OS WebView
+  return;
 }
