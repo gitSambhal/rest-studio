@@ -4,6 +4,7 @@ import {
   X,
   Copy,
   Check,
+  CheckCircle,
   Terminal,
   Zap,
   ShieldCheck,
@@ -262,6 +263,16 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
                 <code className="text-teal-400 font-mono text-xs block bg-slate-900 p-2.5 rounded-lg border border-slate-800">
                   npm run build:neu
                 </code>
+
+                <div className="mt-3 p-2.5 bg-teal-500/10 border border-teal-500/30 rounded-lg text-xs space-y-1">
+                  <span className="font-bold text-teal-300 flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
+                    <span>🍎 Double-Clickable macOS App Bundles Included:</span>
+                  </span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    <code className="text-teal-300 font-mono">npm run build:neu</code> automatically compiles the frontend and generates ready-to-run macOS Application bundles (<strong>RestStudio-ARM64.app</strong> and <strong>RestStudio-x64.app</strong>) in the <code className="text-teal-300 font-mono">bin/</code> folder. Simply double-click <code className="text-teal-300 font-mono">RestStudio.app</code> to launch immediately—no Terminal window, no extra user commands required!
+                  </p>
+                </div>
               </div>
             </div>
           )}
