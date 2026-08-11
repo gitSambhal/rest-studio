@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import sevenZipBin from '7zip-bin';
 
 /**
  * Patches Windows executable PE Subsystem to GUI mode (Subsystem 2)
@@ -37,8 +38,8 @@ function fixPeSubsystem(filePath) {
  * When launched on Windows, it extracts resources into %TEMP% and runs the GUI binary seamlessly.
  */
 function buildWindowsSingleFileExe(distDir) {
-  const sfxStub = path.resolve('node_modules/maker-7z-sfx/7zsd_extra_162_3888/7zsd_All_x64.sfx');
-  const p7z = path.resolve('node_modules/7zip-bin/linux/x64/7za');
+  const sfxStub = path.resolve('scripts/sfx-stubs/7zsd_All_x64.sfx');
+  const p7z = sevenZipBin.path7za;
   
   if (!fs.existsSync(sfxStub) || !fs.existsSync(p7z)) {
     console.warn('[Win SFX] 7z SFX stub or 7za tool missing, skipping SFX packaging.');
