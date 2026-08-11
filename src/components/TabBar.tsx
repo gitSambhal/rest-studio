@@ -117,7 +117,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   };
 
   return (
-    <div className="h-10 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-2 overflow-x-auto shrink-0 select-none relative">
+    <div className="h-10 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-2 overflow-x-auto scrollbar-none shrink-0 select-none relative">
       {/* Left: Open Tabs List */}
       <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar py-1">
         {tabs.map((tab) => {

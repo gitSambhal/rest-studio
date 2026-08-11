@@ -293,7 +293,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
       </div>
 
       {/* Response View Navigation Tabs */}
-      <div className="flex items-center px-4 bg-slate-900/60 border-b border-slate-800 text-xs font-medium space-x-6 shrink-0">
+      <div className="flex items-center px-4 bg-slate-900/60 border-b border-slate-800 text-xs font-medium space-x-6 shrink-0 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('pretty')}

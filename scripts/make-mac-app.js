@@ -5,11 +5,12 @@ import { execSync } from 'child_process';
 /**
  * Creates native macOS .app bundles for Neutralino build targets.
  * Packaging inside a .app bundle prevents macOS from opening Terminal.app when the user double-clicks the application.
+ * Removes raw duplicate macOS binaries after bundling.
  */
 
-// Look for binaries in dist/reststudio first, then bin/
+const distRestStudioDir = path.resolve('dist/reststudio');
 const searchDirs = [
-  path.resolve('dist/reststudio'),
+  distRestStudioDir,
   path.resolve('bin'),
 ];
 
@@ -30,7 +31,7 @@ searchDirs.forEach((searchDir) => {
     const binaryPath = path.join(searchDir, binary);
     if (!fs.existsSync(binaryPath)) return;
 
-    const appDir = path.join(searchDir, appName);
+    const appDir = path.join(distRestStudioDir, appName);
     const contentsDir = path.join(appDir, 'Contents');
     const macOSDir = path.join(contentsDir, 'MacOS');
     const resourcesDir = path.join(contentsDir, 'Resources');
@@ -42,7 +43,7 @@ searchDirs.forEach((searchDir) => {
     fs.copyFileSync(binaryPath, path.join(macOSDir, binary));
 
     // 2. Copy resources.neu into Contents/MacOS and Contents/Resources next to binary
-    const activeResNeu = fs.existsSync(resNeuPath) ? resNeuPath : path.resolve('dist/reststudio/resources.neu');
+    const activeResNeu = fs.existsSync(resNeuPath) ? resNeuPath : path.join(distRestStudioDir, 'resources.neu');
     if (fs.existsSync(activeResNeu)) {
       fs.copyFileSync(activeResNeu, path.join(macOSDir, 'resources.neu'));
       fs.copyFileSync(activeResNeu, path.join(resourcesDir, 'resources.neu'));
@@ -91,6 +92,17 @@ searchDirs.forEach((searchDir) => {
     totalCreated++;
   });
 });
+
+// Clean up loose raw Mac binaries in dist/reststudio to prevent duplicate files
+if (fs.existsSync(distRestStudioDir)) {
+  ['reststudio-mac_arm64', 'reststudio-mac_x64', 'reststudio-mac_universal'].forEach((rawBinary) => {
+    const rawPath = path.join(distRestStudioDir, rawBinary);
+    if (fs.existsSync(rawPath)) {
+      fs.unlinkSync(rawPath);
+      console.log(`[Mac App Bundler] Removed raw duplicate binary: ${rawBinary}`);
+    }
+  });
+}
 
 if (totalCreated === 0) {
   console.log('[Mac App Bundler] No macOS binaries found to bundle into .app packages.');

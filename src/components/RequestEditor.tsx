@@ -410,7 +410,7 @@ export const RequestEditor: React.FC<RequestEditorProps> = ({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center px-4 bg-slate-900/60 border-b border-slate-800 text-xs font-medium space-x-6">
+      <div className="flex items-center px-4 bg-slate-900/60 border-b border-slate-800 text-xs font-medium space-x-6 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('params')}
