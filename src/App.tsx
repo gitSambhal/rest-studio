@@ -1519,7 +1519,6 @@ export default function App() {
         onOpenImportExport={() => setIsImportExportOpen(true)}
         onOpenQuickHelp={() => setIsQuickHelpOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenDesktopModal={() => setIsDesktopModalOpen(true)}
         onOpenQuickNewRequest={() => setIsQuickNewRequestOpen(true)}
         onOpenQuickCurl={() => setIsQuickCurlOpen(true)}
         historyCount={history.length}

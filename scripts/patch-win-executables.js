@@ -4,107 +4,51 @@ import { execSync } from 'child_process';
 import sevenZipBin from '7zip-bin';
 
 /**
- * Patches Windows executable PE Subsystem to GUI mode (Subsystem 2)
+ * Packages Windows executable + resources.neu into:
+ * 1. RestStudio-Windows-x64.exe (Standalone single executable with appended resources.neu)
+ * 2. RestStudio-Windows-x64.zip (Portable zip package containing RestStudio.exe + resources.neu)
  */
-function fixPeSubsystem(filePath) {
-  if (!fs.existsSync(filePath)) return;
+function buildWindowsExecutables(distDir) {
+  const winExePath = path.join(distDir, 'reststudio-win_x64.exe');
+  const resNeuPath = path.join(distDir, 'resources.neu');
+
+  if (!fs.existsSync(winExePath) || !fs.existsSync(resNeuPath)) {
+    console.warn('[Win Build] Windows binary or resources.neu missing, skipping Windows packaging.');
+    return;
+  }
 
   try {
-    const buf = fs.readFileSync(filePath);
-    if (buf.length < 0x200) return;
+    const winExeBuf = fs.readFileSync(winExePath);
+    const resNeuBuf = fs.readFileSync(resNeuPath);
 
-    if (buf.readUInt16LE(0) !== 0x5a4d) return;
+    // 1. Create Standalone Single Executable by concatenating untouched PE binary + resources.neu
+    const standaloneWinExeBuf = Buffer.concat([winExeBuf, resNeuBuf]);
+    const finalWinExePath = path.join(distDir, 'RestStudio-Windows-x64.exe');
+    fs.writeFileSync(finalWinExePath, standaloneWinExeBuf);
+    console.log(`[Win Build] Created single standalone Windows executable (${(standaloneWinExeBuf.length / (1024 * 1024)).toFixed(2)} MB): ${finalWinExePath}`);
 
-    const peOffset = buf.readUInt32LE(0x3c);
-    if (buf.length < peOffset + 0x60) return;
+    // 2. Create Portable ZIP package
+    const p7z = sevenZipBin.path7za;
+    if (fs.existsSync(p7z)) {
+      try { fs.chmodSync(p7z, '755'); } catch (_) {}
+      
+      const tmpDir = path.join(distDir, 'tmp_win_zip');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.mkdirSync(tmpDir, { recursive: true });
 
-    if (buf.readUInt32BE(peOffset) !== 0x50450000) return;
+      fs.copyFileSync(winExePath, path.join(tmpDir, 'RestStudio.exe'));
+      fs.copyFileSync(resNeuPath, path.join(tmpDir, 'resources.neu'));
 
-    const subsystemOffset = peOffset + 0x5c;
-    const currentSubsystem = buf.readUInt16LE(subsystemOffset);
+      const zipPath = path.join(distDir, 'RestStudio-Windows-x64.zip');
+      fs.rmSync(zipPath, { force: true });
 
-    if (currentSubsystem !== 2) {
-      console.log(`[Win Patch] Changing ${path.basename(filePath)} PE Subsystem to 2 (GUI Mode)...`);
-      buf.writeUInt16LE(2, subsystemOffset);
-      fs.writeFileSync(filePath, buf);
+      execSync(`"${p7z}" a -tzip "${zipPath}" "${tmpDir}/*"`, { stdio: 'pipe' });
+      console.log(`[Win Build] Created portable Windows ZIP package: ${zipPath}`);
+
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   } catch (err) {
-    console.warn(`[Win Patch] Failed to patch PE header for ${filePath}:`, err.message);
-  }
-}
-
-/**
- * Packages Windows executable + resources.neu into a true single-file SFX executable (.exe).
- * When launched on Windows, it extracts resources into %TEMP% and runs the GUI binary seamlessly.
- */
-function buildWindowsSingleFileExe(distDir) {
-  const sfxStub = path.resolve('scripts/sfx-stubs/7zsd_All_x64.sfx');
-  const p7z = sevenZipBin.path7za;
-  
-  if (!fs.existsSync(sfxStub) || !fs.existsSync(p7z)) {
-    console.warn('[Win SFX] 7z SFX stub or 7za tool missing, skipping SFX packaging.');
-    return;
-  }
-
-  const winExe = path.join(distDir, 'reststudio-win_x64.exe');
-  const resNeu = path.join(distDir, 'resources.neu');
-
-  if (!fs.existsSync(winExe) || !fs.existsSync(resNeu)) {
-    console.warn('[Win SFX] Windows binary or resources.neu missing, skipping SFX build.');
-    return;
-  }
-
-  // Ensure 7za is executable
-  try { fs.chmodSync(p7z, '755'); } catch (_) {}
-
-  // 1. Prepare temp directory
-  const tmpDir = path.join(distDir, 'tmp_win_sfx');
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-  fs.mkdirSync(tmpDir, { recursive: true });
-
-  fs.copyFileSync(winExe, path.join(tmpDir, 'reststudio-win_x64.exe'));
-  fs.copyFileSync(resNeu, path.join(tmpDir, 'resources.neu'));
-  if (fs.existsSync('public/icon.png')) {
-    fs.copyFileSync('public/icon.png', path.join(tmpDir, 'icon.png'));
-  }
-
-  // Ensure PE subsystem 2 (GUI mode)
-  fixPeSubsystem(path.join(tmpDir, 'reststudio-win_x64.exe'));
-
-  // 2. Compress into app.7z archive
-  const archivePath = path.join(distDir, 'app.7z');
-  fs.rmSync(archivePath, { force: true });
-
-  try {
-    execSync(`"${p7z}" a -t7z -m0=lzma2 -mx=9 "${archivePath}" "${tmpDir}/*"`, { stdio: 'pipe' });
-
-    // 3. Create SFX config.txt
-    const configContent = `;!@Install@!UTF-8!
-Title="RestStudio"
-RunProgram="reststudio-win_x64.exe"
-GUIMode="2"
-;!@InstallEnd@!
-`;
-    const configPath = path.join(distDir, 'sfx_config.txt');
-    fs.writeFileSync(configPath, configContent, 'utf8');
-
-    // 4. Concatenate stub + config + 7z archive into single RestStudio-Windows-x64.exe
-    const stubBuf = fs.readFileSync(sfxStub);
-    const cfgBuf = fs.readFileSync(configPath);
-    const arcBuf = fs.readFileSync(archivePath);
-
-    const finalWinExeBuf = Buffer.concat([stubBuf, cfgBuf, arcBuf]);
-    const finalWinExePath = path.join(distDir, 'RestStudio-Windows-x64.exe');
-    
-    fs.writeFileSync(finalWinExePath, finalWinExeBuf);
-    console.log(`[Win SFX] Created single standalone Windows executable (${(finalWinExeBuf.length / (1024 * 1024)).toFixed(2)} MB): ${finalWinExePath}`);
-
-    // Cleanup temp files
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-    fs.rmSync(archivePath, { force: true });
-    fs.rmSync(configPath, { force: true });
-  } catch (err) {
-    console.warn('[Win SFX] Error building SFX package:', err.message);
+    console.warn('[Win Build] Error creating Windows packages:', err.message);
   }
 }
 
@@ -173,8 +117,8 @@ __ARCHIVE_FOLLOWS__
 const distDir = path.resolve('dist/reststudio');
 
 if (fs.existsSync(distDir)) {
-  // 1. Build Windows Single-File Executable
-  buildWindowsSingleFileExe(distDir);
+  // 1. Build Windows Executables
+  buildWindowsExecutables(distDir);
 
   // 2. Build Linux Single-File Binaries
   buildLinuxSingleFileBinaries(distDir);

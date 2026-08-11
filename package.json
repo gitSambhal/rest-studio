@@ -14,7 +14,8 @@
     "build:neu": "npm run build && npx @neutralinojs/neu update && npx @neutralinojs/neu build && (chmod +x bin/* 2>/dev/null || true) && (xattr -cr bin/ 2>/dev/null || true) && node scripts/make-mac-app.js && node scripts/patch-win-executables.js",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "node -e \"const fs=require('fs'); ['dist', 'src-tauri/target', '.neu', 'server.js'].forEach(d => fs.rmSync(d, {recursive: true, force: true}));\"",
+    "prebuild": "npm run clean",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

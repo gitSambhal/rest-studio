@@ -473,18 +473,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* SECTION 3: Settings & Tools Menu */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 md:order-3">
-          {onOpenDesktopModal && (
-            <button
-              type="button"
-              onClick={onOpenDesktopModal}
-              className="flex items-center space-x-1.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 border border-emerald-500/40 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer shadow-sm shadow-emerald-950/20"
-              title="Desktop App Mode & Build Executables"
-            >
-              <Monitor className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">Desktop App</span>
-            </button>
-          )}
-
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -510,26 +498,6 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-slate-900 border border-slate-700/80 divide-slate-800/60 text-slate-100'
                   : 'bg-white border border-slate-200 divide-slate-100 text-slate-900 shadow-slate-900/10'
               }`}>
-                {/* Category 0: Desktop Native Mode */}
-                {onOpenDesktopModal && (
-                  <div className="p-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onOpenDesktopModal();
-                        setIsMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center space-x-2.5 transition-colors cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30`}
-                    >
-                      <Monitor className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-bold leading-tight text-emerald-300">Desktop App Conversion</span>
-                        <span className="text-[10px] text-emerald-400/80">Build .dmg, .exe, .AppImage installers</span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-
                 {/* Category 1: Environment & Variables */}
                 <div className="p-1 space-y-0.5">
                   <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
