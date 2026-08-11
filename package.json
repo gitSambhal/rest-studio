@@ -3,46 +3,19 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "electron/main.cjs",
   "scripts": {
     "dev": "tsx server.ts",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "neu:dev": "npx @neutralinojs/neu run",
     "neu:build": "npx @neutralinojs/neu build",
-    "electron:dev": "ELECTRON_START_URL=http://localhost:3000 electron .",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "build:tauri": "vite build && tauri build",
-    "build:desktop": "vite build && electron-builder",
-    "build:desktop:mac": "vite build && electron-builder --mac",
-    "build:desktop:win": "vite build && electron-builder --win",
-    "build:desktop:linux": "vite build && electron-builder --linux",
+    "build:neu": "vite build && npx @neutralinojs/neu build",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
-  },
-  "build": {
-    "appId": "top.suhail.rest-studio",
-    "productName": "RestStudio",
-    "directories": {
-      "output": "dist-desktop"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "mac": {
-      "category": "public.app-category.developer-tools",
-      "target": ["dmg", "zip"]
-    },
-    "win": {
-      "target": ["nsis", "portable"]
-    },
-    "linux": {
-      "target": ["AppImage", "deb"]
-    }
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -65,8 +38,6 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10.4.21",
-    "electron": "^43.3.0",
-    "electron-builder": "^26.15.3",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

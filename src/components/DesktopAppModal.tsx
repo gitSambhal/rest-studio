@@ -28,11 +28,11 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
   isDarkMode = true,
 }) => {
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'tauri' | 'wails' | 'neutralino' | 'electron'>('tauri');
+  const [activeTab, setActiveTab] = useState<'tauri' | 'wails' | 'neutralino'>('tauri');
   const [isNativeActive, setIsNativeActive] = useState<boolean>(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && ((window as any).electronAPI?.isElectron || (window as any).__TAURI__)) {
+    if (typeof window !== 'undefined' && ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__)) {
       setIsNativeActive(true);
     }
   }, []);
@@ -85,12 +85,12 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-5 text-xs text-slate-300">
           {/* Comparison Cards Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Tauri */}
             <button
               type="button"
               onClick={() => setActiveTab('tauri')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
                 activeTab === 'tauri'
                   ? 'bg-emerald-950/50 border-emerald-500 text-white shadow-md shadow-emerald-950/40'
                   : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
@@ -111,7 +111,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('neutralino')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                 activeTab === 'neutralino'
                   ? 'bg-teal-950/50 border-teal-500 text-white shadow-md'
                   : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
@@ -132,7 +132,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('wails')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                 activeTab === 'wails'
                   ? 'bg-sky-950/50 border-sky-500 text-white shadow-md'
                   : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
@@ -147,27 +147,6 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
               <div className="mt-2 text-lg font-extrabold text-white">~10 MB</div>
               <div className="text-[10px] text-slate-400 font-mono">Go + Webview2 / WebKit</div>
               <div className="mt-1 text-[10px] text-sky-300">RAM: ~40MB</div>
-            </button>
-
-            {/* Electron (Old) */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('electron')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                activeTab === 'electron'
-                  ? 'bg-purple-950/50 border-purple-500 text-white shadow-md'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-400 uppercase tracking-wider font-mono">Electron</span>
-                <span className="text-[10px] bg-slate-800 text-slate-400 font-mono px-1.5 py-0.5 rounded">
-                  Heavy
-                </span>
-              </div>
-              <div className="mt-2 text-lg font-extrabold text-slate-400">~120 MB+</div>
-              <div className="text-[10px] text-slate-500 font-mono">Bundles Chromium + Node</div>
-              <div className="mt-1 text-[10px] text-red-400">RAM: ~200MB+</div>
             </button>
           </div>
 
@@ -255,18 +234,33 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
 
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-200">Build Neutralino Desktop Binary:</span>
+                  <span className="font-bold text-slate-200">1. Run Neutralino in Live Dev Mode:</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy('npx @neutralinojs/neu build', 'neu_cmd')}
+                    onClick={() => handleCopy('npm run neu:dev', 'neu_dev')}
                     className="flex items-center space-x-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded cursor-pointer transition-colors"
                   >
-                    {copiedCmd === 'neu_cmd' ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                    <span>{copiedCmd === 'neu_cmd' ? 'Copied!' : 'Copy'}</span>
+                    {copiedCmd === 'neu_dev' ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                    <span>{copiedCmd === 'neu_dev' ? 'Copied!' : 'Copy'}</span>
                   </button>
                 </div>
                 <code className="text-teal-400 font-mono text-xs block bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                  npx @neutralinojs/neu build
+                  npm run neu:dev
+                </code>
+
+                <div className="flex items-center justify-between text-xs pt-2">
+                  <span className="font-bold text-slate-200">2. Build Ultra-Lightweight Neutralino Package (~2MB):</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('npm run build:neu', 'neu_build')}
+                    className="flex items-center space-x-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded cursor-pointer transition-colors"
+                  >
+                    {copiedCmd === 'neu_build' ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                    <span>{copiedCmd === 'neu_build' ? 'Copied!' : 'Copy'}</span>
+                  </button>
+                </div>
+                <code className="text-teal-400 font-mono text-xs block bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  npm run build:neu
                 </code>
               </div>
             </div>
@@ -304,24 +298,6 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({
                   wails build
                 </code>
               </div>
-            </div>
-          )}
-
-          {activeTab === 'electron' && (
-            <div className="bg-slate-950 border border-purple-500/40 p-4 rounded-xl space-y-3 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <HardDrive className="w-5 h-5 text-purple-400" />
-                  <h3 className="font-bold text-white text-sm">Electron (Traditional Chromium + Node)</h3>
-                </div>
-                <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 font-mono px-2 py-0.5 rounded">
-                  Heavy (~120MB+)
-                </span>
-              </div>
-
-              <p className="text-slate-400 text-xs leading-relaxed">
-                Electron bundles a complete copy of Chromium and Node.js in every build. While easy to set up, build sizes exceed 100MB and consume 200MB+ of RAM.
-              </p>
             </div>
           )}
 

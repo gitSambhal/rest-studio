@@ -87,24 +87,6 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
     }
   }
 
-  // 0b. Check if running inside Electron Native Desktop Container!
-  if (typeof window !== 'undefined' && (window as any).electronAPI?.isElectron) {
-    try {
-      console.log('[RestStudio Desktop] Executing via Electron Native Node HTTP Engine...');
-      const electronRes = await (window as any).electronAPI.executeRequest({
-        method,
-        url: targetUrl,
-        headers,
-        body,
-      });
-      if (electronRes) {
-        return electronRes;
-      }
-    } catch (e) {
-      console.warn('[RestStudio Desktop] Native Electron execution error, falling back to web pipeline:', e);
-    }
-  }
-
   // Retrieve user settings from localStorage
   const requestMode = localStorage.getItem('reststudio_request_mode') || 'auto'; // 'auto' | 'direct' | 'proxy'
   const customProxyUrl = localStorage.getItem('reststudio_custom_proxy_url') || '';
