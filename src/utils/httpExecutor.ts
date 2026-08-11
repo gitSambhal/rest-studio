@@ -24,8 +24,8 @@ async function getNeutralino(): Promise<any> {
 }
 
 /**
- * Execute HTTP requests via Neutralino Native OS Engine (curl or webview fetch)
- * Completely bypasses browser CORS & Private Network Access restrictions!
+ * Execute HTTP requests via Neutralino Native OS Engine (curl config file execution)
+ * Completely bypasses browser CORS & Private Network Access restrictions across Windows, Mac, and Linux!
  */
 async function executeNeutralinoFetch(
   method: string,
@@ -40,37 +40,142 @@ async function executeNeutralinoFetch(
     try { neu.init(); } catch (_) {}
   }
 
-  // 1. Execute via Neutralino OS execCommand with native OS curl (0 CORS/PNA restrictions)
+  // 1. Execute via Neutralino OS execCommand using temp cURL config file (0 quote escaping issues, 0 CORS)
   if (neu && neu.os && typeof neu.os.execCommand === 'function') {
+    const reqId = Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+    let tempDir = '.';
+    try {
+      if (typeof neu.os.getEnv === 'function') {
+        const envTemp = (await neu.os.getEnv('TEMP')) || (await neu.os.getEnv('TMP')) || (await neu.os.getEnv('TMPDIR'));
+        if (envTemp && typeof envTemp === 'string') {
+          tempDir = envTemp;
+        }
+      }
+    } catch (_) {}
+
+    const cleanTempDir = tempDir.replace(/\\/g, '/').replace(/\/+$/, '');
+    const cfgPath = `${cleanTempDir}/rs_cfg_${reqId}.txt`;
+    const bodyPath = `${cleanTempDir}/rs_body_${reqId}.txt`;
+
+    let hasBody = false;
+    let bodyStr = '';
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
+      hasBody = true;
+      bodyStr = typeof body === 'object' ? JSON.stringify(body) : String(body);
+    }
+
+    let createdTempFiles = false;
+
+    try {
+      if (neu.filesystem && typeof neu.filesystem.writeFile === 'function') {
+        if (hasBody) {
+          await neu.filesystem.writeFile(bodyPath, bodyStr);
+        }
+
+        const cfgLines = [
+          `url = "${targetUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`,
+          `request = "${method.toUpperCase()}"`,
+          `include`,
+          `silent`,
+          `show-error`,
+          `max-time = 60`,
+          `insecure`,
+        ];
+
+        if (headers && typeof headers === 'object') {
+          Object.entries(headers).forEach(([k, v]) => {
+            if (k && v !== undefined && v !== null) {
+              const cleanK = String(k).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+              const cleanV = String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+              cfgLines.push(`header = "${cleanK}: ${cleanV}"`);
+            }
+          });
+        }
+
+        if (hasBody) {
+          cfgLines.push(`data-binary = "@${bodyPath}"`);
+        }
+
+        await neu.filesystem.writeFile(cfgPath, cfgLines.join('\n'));
+        createdTempFiles = true;
+
+        const isWin = (typeof window !== 'undefined' && (window.navigator?.platform || '').toLowerCase().includes('win')) ||
+                      (window as any).NL_OS === 'Windows';
+        const curlExe = isWin ? 'curl.exe' : 'curl';
+        const curlCmd = `${curlExe} -s -S -K "${cfgPath}"`;
+
+        console.log('[RestStudio Neutralino] Executing native cURL via config file:', curlCmd);
+        const execResult = await neu.os.execCommand(curlCmd);
+
+        if (execResult && typeof execResult.stdOut === 'string' && execResult.stdOut.trim()) {
+          const rawOutput = execResult.stdOut;
+          const duration = Math.round(performance.now() - startTime);
+
+          const headerBodySplit = rawOutput.split(/\r?\n\r?\n/);
+          const lastHeaderIdx = headerBodySplit.length > 1 ? headerBodySplit.length - 2 : 0;
+          const rawHeaders = headerBodySplit[lastHeaderIdx] || headerBodySplit[0] || '';
+          const responseBody = headerBodySplit.slice(lastHeaderIdx + 1).join('\r\n\r\n') || '';
+
+          const statusMatch = rawHeaders.match(/HTTP\/\d(?:\.\d)?\s+(\d+)\s*(.*)/i);
+          const status = statusMatch ? parseInt(statusMatch[1], 10) : 200;
+          const statusText = statusMatch ? statusMatch[2].trim() : 'OK';
+
+          const parsedHeaders: Record<string, string> = {};
+          rawHeaders.split(/\r?\n/).forEach((line) => {
+            const colonIdx = line.indexOf(':');
+            if (colonIdx > 0) {
+              const k = line.substring(0, colonIdx).trim().toLowerCase();
+              const v = line.substring(colonIdx + 1).trim();
+              parsedHeaders[k] = v;
+            }
+          });
+
+          return {
+            status,
+            statusText,
+            headers: parsedHeaders,
+            body: responseBody,
+            size: new Blob([responseBody]).size,
+            duration,
+            timestamp: Date.now(),
+            ok: status >= 200 && status < 300,
+            contentType: parsedHeaders['content-type'] || 'text/plain',
+          };
+        }
+      }
+    } catch (cfgErr) {
+      console.warn('[RestStudio Neutralino] Temp file cURL config execution failed, attempting direct inline fallback:', cfgErr);
+    } finally {
+      if (createdTempFiles && neu.filesystem && typeof neu.filesystem.removeFile === 'function') {
+        try { await neu.filesystem.removeFile(cfgPath); } catch (_) {}
+        if (hasBody) {
+          try { await neu.filesystem.removeFile(bodyPath); } catch (_) {}
+        }
+      }
+    }
+
+    // Direct inline cURL fallback
     try {
       let headerArgs = '';
       if (headers && typeof headers === 'object') {
         Object.entries(headers).forEach(([k, v]) => {
           if (k && v !== undefined && v !== null) {
-            const cleanK = String(k).replace(/"/g, '\\"');
-            const cleanV = String(v).replace(/"/g, '\\"');
-            headerArgs += ` -H "${cleanK}: ${cleanV}"`;
+            headerArgs += ` -H "${String(k).replace(/"/g, '\\"')}: ${String(v).replace(/"/g, '\\"')}"`;
           }
         });
       }
 
-      let bodyArg = '';
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
-        const bodyStr = typeof body === 'object' ? JSON.stringify(body) : String(body);
-        const escapedBody = bodyStr.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        bodyArg = ` -d "${escapedBody}"`;
-      }
-
+      const isWin = (typeof window !== 'undefined' && (window.navigator?.platform || '').toLowerCase().includes('win')) || (window as any).NL_OS === 'Windows';
+      const curlExe = isWin ? 'curl.exe' : 'curl';
       const cleanUrl = targetUrl.replace(/"/g, '\\"');
-      const curlCmd = `curl -i -s -S -m 30 -X ${method.toUpperCase()}${headerArgs}${bodyArg} "${cleanUrl}"`;
-      console.log('[RestStudio Neutralino] Executing native OS curl command:', curlCmd);
+      const inlineCmd = `${curlExe} -i -s -S -k -m 30 -X ${method.toUpperCase()}${headerArgs} "${cleanUrl}"`;
 
-      const execResult = await neu.os.execCommand(curlCmd);
+      console.log('[RestStudio Neutralino] Executing inline fallback cURL:', inlineCmd);
+      const execResult = await neu.os.execCommand(inlineCmd);
       if (execResult && typeof execResult.stdOut === 'string' && execResult.stdOut.trim()) {
         const rawOutput = execResult.stdOut;
         const duration = Math.round(performance.now() - startTime);
 
-        // Parse response status, headers, and body
         const headerBodySplit = rawOutput.split(/\r?\n\r?\n/);
         const lastHeaderIdx = headerBodySplit.length > 1 ? headerBodySplit.length - 2 : 0;
         const rawHeaders = headerBodySplit[lastHeaderIdx] || headerBodySplit[0] || '';
@@ -102,8 +207,8 @@ async function executeNeutralinoFetch(
           contentType: parsedHeaders['content-type'] || 'text/plain',
         };
       }
-    } catch (cmdErr) {
-      console.warn('[RestStudio Neutralino] OS execCommand curl attempt error:', cmdErr);
+    } catch (inlineErr) {
+      console.warn('[RestStudio Neutralino] Inline cURL fallback error:', inlineErr);
     }
   }
 
