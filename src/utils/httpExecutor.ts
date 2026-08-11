@@ -9,16 +9,185 @@ export interface HttpRequestOptions {
 }
 
 /**
+ * Execute HTTP requests via Neutralino Native OS Engine (curl or native fetch)
+ */
+async function executeNeutralinoFetch(
+  method: string,
+  targetUrl: string,
+  headers: Record<string, string>,
+  body?: any
+): Promise<ExecutionResponse | null> {
+  const neu = (window as any).Neutralino;
+  const startTime = performance.now();
+
+  // 1. Try Neutralino OS execCommand with native curl (0 CORS/PNA restrictions)
+  if (neu && neu.os && typeof neu.os.execCommand === 'function') {
+    try {
+      let headerArgs = '';
+      if (headers && typeof headers === 'object') {
+        Object.entries(headers).forEach(([k, v]) => {
+          if (k && v !== undefined && v !== null) {
+            headerArgs += ` -H "${k.replace(/"/g, '\\"')}: ${String(v).replace(/"/g, '\\"')}"`;
+          }
+        });
+      }
+
+      let bodyArg = '';
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body !== undefined && body !== null) {
+        const bodyStr = typeof body === 'object' ? JSON.stringify(body) : String(body);
+        bodyArg = ` -d ${JSON.stringify(bodyStr)}`;
+      }
+
+      // -i includes response headers, -s suppresses progress meter, -S shows errors
+      const curlCmd = `curl -i -s -S -X ${method.toUpperCase()}${headerArgs}${bodyArg} "${targetUrl.replace(/"/g, '\\"')}"`;
+      console.log('[RestStudio Neutralino] Executing native OS curl command...');
+
+      const execResult = await neu.os.execCommand(curlCmd);
+      if (execResult && typeof execResult.stdOut === 'string' && execResult.stdOut.trim()) {
+        const rawOutput = execResult.stdOut;
+        const duration = Math.round(performance.now() - startTime);
+
+        // Parse response status, headers, and body
+        const headerBodySplit = rawOutput.split(/\r?\n\r?\n/);
+        const rawHeaders = headerBodySplit[0] || '';
+        const responseBody = headerBodySplit.slice(1).join('\r\n\r\n') || '';
+
+        const statusMatch = rawHeaders.match(/HTTP\/\d\.\d\s+(\d+)\s*(.*)/i);
+        const status = statusMatch ? parseInt(statusMatch[1], 10) : 200;
+        const statusText = statusMatch ? statusMatch[2].trim() : 'OK';
+
+        const parsedHeaders: Record<string, string> = {};
+        rawHeaders.split(/\r?\n/).forEach((line) => {
+          const colonIdx = line.indexOf(':');
+          if (colonIdx > 0) {
+            const k = line.substring(0, colonIdx).trim().toLowerCase();
+            const v = line.substring(colonIdx + 1).trim();
+            parsedHeaders[k] = v;
+          }
+        });
+
+        return {
+          status,
+          statusText,
+          headers: parsedHeaders,
+          body: responseBody,
+          size: new Blob([responseBody]).size,
+          duration,
+          timestamp: Date.now(),
+          ok: status >= 200 && status < 300,
+          contentType: parsedHeaders['content-type'] || 'text/plain',
+        };
+      }
+    } catch (cmdErr) {
+      console.warn('[RestStudio Neutralino] OS execCommand curl attempt failed:', cmdErr);
+    }
+  }
+
+  // 2. Fallback to standard webview fetch
+  try {
+    const res = await fetch(targetUrl, {
+      method: method.toUpperCase(),
+      headers,
+      body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body ? (typeof body === 'object' ? JSON.stringify(body) : String(body)) : undefined,
+    });
+    const duration = Math.round(performance.now() - startTime);
+    const text = await res.text();
+    const resHeaders: Record<string, string> = {};
+    if (res.headers && typeof res.headers.forEach === 'function') {
+      res.headers.forEach((v: string, k: string) => { resHeaders[k] = v; });
+    }
+    return {
+      status: res.status,
+      statusText: res.statusText || 'OK',
+      headers: resHeaders,
+      body: text,
+      size: new Blob([text]).size,
+      duration,
+      timestamp: Date.now(),
+      ok: res.ok,
+      contentType: res.headers?.get('content-type') || 'text/plain',
+    };
+  } catch (fErr) {
+    console.warn('[RestStudio Neutralino] Neutralino webview fetch error:', fErr);
+  }
+
+  return null;
+}
+
+/**
+ * Execute HTTP requests via Tauri Native Engine
+ */
+async function executeTauriFetch(
+  method: string,
+  targetUrl: string,
+  headers: Record<string, string>,
+  body?: any
+): Promise<ExecutionResponse | null> {
+  const startTime = performance.now();
+
+  // 1. Try Tauri v2/v1 http plugin fetch if present
+  if ((window as any).__TAURI__?.http?.fetch) {
+    try {
+      const res = await (window as any).__TAURI__.http.fetch(targetUrl, {
+        method: method.toUpperCase(),
+        headers,
+        body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body ? (typeof body === 'object' ? JSON.stringify(body) : String(body)) : undefined,
+      });
+      const duration = Math.round(performance.now() - startTime);
+      const text = await res.text();
+      const resHeaders: Record<string, string> = {};
+      if (res.headers && typeof res.headers.forEach === 'function') {
+        res.headers.forEach((v: string, k: string) => { resHeaders[k] = v; });
+      }
+      return {
+        status: res.status,
+        statusText: res.statusText || 'OK',
+        headers: resHeaders,
+        body: text,
+        size: new Blob([text]).size,
+        duration,
+        timestamp: Date.now(),
+        ok: res.ok,
+        contentType: res.headers?.get('content-type') || 'text/plain',
+      };
+    } catch (err) {
+      console.warn('[RestStudio Tauri] Tauri http fetch failed:', err);
+    }
+  }
+
+  // 2. Fallback to standard webview fetch inside Tauri window
+  try {
+    const res = await fetch(targetUrl, {
+      method: method.toUpperCase(),
+      headers,
+      body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body ? (typeof body === 'object' ? JSON.stringify(body) : String(body)) : undefined,
+    });
+    const duration = Math.round(performance.now() - startTime);
+    const text = await res.text();
+    const resHeaders: Record<string, string> = {};
+    if (res.headers && typeof res.headers.forEach === 'function') {
+      res.headers.forEach((v: string, k: string) => { resHeaders[k] = v; });
+    }
+    return {
+      status: res.status,
+      statusText: res.statusText || 'OK',
+      headers: resHeaders,
+      body: text,
+      size: new Blob([text]).size,
+      duration,
+      timestamp: Date.now(),
+      ok: res.ok,
+      contentType: res.headers?.get('content-type') || 'text/plain',
+    };
+  } catch (err) {
+    console.warn('[RestStudio Tauri] Standard fetch inside Tauri failed:', err);
+  }
+
+  return null;
+}
+
+/**
  * Executes an HTTP request for RestStudio.
- * Supports:
- * 1. Automatic Fallback: Tries `/api/proxy` first (if backend available).
- *    If `/api/proxy` is unreachable or returns 404/HTML,
- *    it automatically falls back to Direct Client-Side Browser `fetch()`.
- * 2. Explicit Execution Modes:
- *    - 'auto': Proxy first -> Direct Client Fetch fallback
- *    - 'direct': Direct Client-Side Browser `fetch()`
- *    - 'proxy': Server proxy only
- * 3. Custom Proxy URL: Route requests via a user-defined CORS proxy if specified.
  */
 export async function executeHttpRequest(options: HttpRequestOptions): Promise<ExecutionResponse> {
   const { method = 'GET', url, headers = {}, body } = options;
@@ -54,34 +223,27 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
 
   const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(targetUrl);
 
-  // 0a. Check if running inside Tauri (Rust Native Lightweight App ~3MB)
+  // 0a. Check if running inside Neutralino Native Desktop Container (~2MB)
+  if (typeof window !== 'undefined' && ((window as any).Neutralino || (window as any).NL_PORT || (window as any).__NL_PORT__)) {
+    try {
+      console.log('[RestStudio Neutralino] Executing via Neutralino Native OS Engine...');
+      const neuRes = await executeNeutralinoFetch(method, targetUrl, headers, body);
+      if (neuRes && neuRes.status > 0) {
+        return neuRes;
+      }
+    } catch (nErr) {
+      console.warn('[RestStudio Neutralino] Native execution error, falling back:', nErr);
+    }
+  }
+
+  // 0b. Check if running inside Tauri Native Desktop Container (~3MB)
   if (typeof window !== 'undefined' && ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI_IPC__)) {
     try {
       console.log('[RestStudio Tauri] Executing via Tauri Native Rust Engine...');
-      const tauriFetch = (window as any).__TAURI__?.http?.fetch || fetch;
-      const startTime = performance.now();
-      const res = await tauriFetch(targetUrl, {
-        method: method.toUpperCase(),
-        headers,
-        body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && body ? (typeof body === 'object' ? JSON.stringify(body) : String(body)) : undefined,
-      });
-      const duration = Math.round(performance.now() - startTime);
-      const text = await res.text();
-      const resHeaders: Record<string, string> = {};
-      if (res.headers && typeof res.headers.forEach === 'function') {
-        res.headers.forEach((v: string, k: string) => { resHeaders[k] = v; });
+      const tauriRes = await executeTauriFetch(method, targetUrl, headers, body);
+      if (tauriRes && tauriRes.status > 0) {
+        return tauriRes;
       }
-      return {
-        status: res.status,
-        statusText: res.statusText || 'OK',
-        headers: resHeaders,
-        body: text,
-        size: new Blob([text]).size,
-        duration,
-        timestamp: Date.now(),
-        ok: res.ok,
-        contentType: res.headers?.get('content-type') || 'text/plain',
-      };
     } catch (tErr) {
       console.warn('[RestStudio Tauri] Native Tauri execution error, falling back:', tErr);
     }
@@ -101,16 +263,15 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
     return await executeCustomProxyFetch(customProxyUrl.trim(), method, targetUrl, headers, body);
   }
 
-  // 3. For localhost requests on non-3000 ports in 'auto' mode:
-  // Try direct browser fetch first since 'localhost' lives on the user's computer
-  if (isLocalhostUrl && !targetUrl.includes(':3000')) {
+  // 3. For ALL localhost / 127.0.0.1 requests in 'auto' mode:
+  // Since 'localhost' lives on the user's local physical computer (not on the Cloud Run server),
+  // we MUST execute direct client fetch directly.
+  if (isLocalhostUrl) {
     const directRes = await executeDirectClientFetch(method, targetUrl, headers, body);
-    if (directRes.ok || directRes.status > 0) {
-      return directRes;
-    }
+    return directRes;
   }
 
-  // 4. Mode 'auto' or 'proxy': Try /api/proxy first
+  // 4. Mode 'auto' or 'proxy': Try /api/proxy first for remote APIs
   try {
     const startTime = performance.now();
     const proxyRes = await fetch('/api/proxy', {
@@ -127,7 +288,6 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
     const contentType = proxyRes.headers.get('content-type') || '';
     const responseText = await proxyRes.text();
 
-    // Detect if server returned non-200, 404 HTML page or SPA index fallback
     const isHtmlResponse = responseText.trim().toLowerCase().startsWith('<!doctype') || responseText.trim().toLowerCase().startsWith('<html') || contentType.includes('text/html');
 
     if (!proxyRes.ok || isHtmlResponse) {
@@ -135,39 +295,27 @@ export async function executeHttpRequest(options: HttpRequestOptions): Promise<E
       return await executeDirectClientFetch(method, targetUrl, headers, body);
     }
 
-    // Try parsing JSON safely
     try {
       const responseData: ExecutionResponse = JSON.parse(responseText);
 
-      // If the proxy reached target server and got a real HTTP response status (> 0, e.g. 200, 400, 404, 500), return it
       if (responseData.status > 0) {
         return responseData;
       }
 
-      // If responseData.status === 0 (proxy could not connect to target server e.g. ECONNREFUSED)
-      console.warn('[RestStudio] Proxy returned status 0 (connection error). Auto falling back to direct client fetch.');
-      const directClientRes = await executeDirectClientFetch(method, targetUrl, headers, body);
-
-      // If direct client fetch succeeded or got an actual response status > 0, return it
-      if (directClientRes.status > 0) {
-        return directClientRes;
-      }
-
-      // If direct client fetch also returned status 0, return directClientRes
-      return directClientRes;
+      console.warn('[RestStudio] Proxy returned status 0. Auto falling back to direct client fetch.');
+      return await executeDirectClientFetch(method, targetUrl, headers, body);
     } catch (jsonParseErr) {
       console.warn('[RestStudio] Failed to parse proxy response as JSON. Falling back to direct client fetch.', jsonParseErr);
       return await executeDirectClientFetch(method, targetUrl, headers, body);
     }
   } catch (err: any) {
-    // Server proxy fetch network/connection exception -> fall back to direct client fetch
     console.warn('[RestStudio] Server proxy fetch error, falling back to direct client fetch:', err?.message);
     return await executeDirectClientFetch(method, targetUrl, headers, body);
   }
 }
 
 /**
- * Helper to execute request via public CORS proxies (corsproxy.io, allorigins.win, thingproxy)
+ * Helper to execute request via public CORS proxies
  */
 async function tryPublicCorsProxies(
   method: string,
@@ -238,7 +386,6 @@ async function tryPublicCorsProxies(
 
 /**
  * Direct Client-Side Browser `fetch()`
- * Executes requests directly from the user's browser without requiring any server or function backend.
  */
 export async function executeDirectClientFetch(
   method: string,
@@ -270,7 +417,6 @@ export async function executeDirectClientFetch(
   }
 
   try {
-    // If target URL is on local-cors-proxy default port (8010) and missing /proxy/ prefix, auto-format
     let actualFetchUrl = targetUrl;
     if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0):8010\/(?!proxy\/)/i.test(targetUrl)) {
       actualFetchUrl = targetUrl.replace(/^(https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):8010)\/(?!proxy\/)?(.*)$/i, '$1/proxy/$2');
@@ -305,7 +451,7 @@ export async function executeDirectClientFetch(
     const duration = Math.round(endTime - startTime);
 
     if (isLocalhostUrl || isPrivateIpUrl) {
-      // 1. Try formatted /proxy/ URL if not tried yet
+      // 1. Try formatted /proxy/ URL if local-cors-proxy port 8010 is targeted
       if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0):8010\//i.test(targetUrl) && !targetUrl.includes('/proxy/')) {
         const proxyFormattedUrl = targetUrl.replace(/^(https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):8010)\/(.*)$/i, '$1/proxy/$2');
         try {
@@ -341,10 +487,9 @@ export async function executeDirectClientFetch(
         console.warn('[RestStudio] SW Proxy Bridge automatic attempt failed:', swErr);
       }
 
-      // 2. Automatically trigger Chrome's Local Network Access preflight
+      // 3. Automatically trigger Chrome's Local Network Access preflight
       try {
         await requestLocalNetworkPermission(targetUrl);
-        // Retry direct fetch after preflight permission trigger
         const retryRes = await fetch(targetUrl, fetchOptions);
         const retryEndTime = performance.now();
         const retryText = await retryRes.text();
@@ -379,11 +524,11 @@ export async function executeDirectClientFetch(
             message: err?.message || 'Failed to fetch',
             cause: 'Chrome enforces Private Network Access (PNA) and CORS when HTTPS web apps try to fetch from localhost or private network IPs.',
             swBridgeStatus: 'Automated Service Worker Bridge and PNA preflight executed.',
-            howChromePermissionWorks: [
-              '1. Click "Allow" if Chrome displays the "Local network devices and apps" permission prompt in the address bar.',
-              '2. Check Chrome Site Settings -> "Local network access" or "Insecure content" for this site origin and set to "Allow".',
-              '3. Ensure your local server sends CORS headers: `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Private-Network: true`.',
-              '4. Or run `npx ngrok http <port>` (e.g. https://xxxx.ngrok-free.app) for instant remote & local testing without browser restrictions.'
+            howToFix: [
+              'Option A (Native Desktop App): Run `npm run neu:dev` or `npm run tauri:dev` for 0 CORS / 0 PNA restrictions.',
+              'Option B (Local CORS Proxy): Run `npx local-cors-proxy --proxyUrl http://localhost:3000` (bridges to http://localhost:8010).',
+              'Option C (Server CORS Headers): Ensure your local server sends: `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Private-Network: true`.',
+              'Option D (Tunnel): Run `npx ngrok http <port>` (e.g. https://xxxx.ngrok-free.app) for instant HTTPS testing.'
             ],
             browserError: err?.message || 'Failed to fetch (Permission denied for local network address space)',
           },
@@ -399,7 +544,6 @@ export async function executeDirectClientFetch(
     }
 
     // For external non-localhost URLs: if direct fetch fails (typically due to browser CORS rules)
-    // 1. Automatically proxy the request via /api/proxy (Axios Server Proxy)
     try {
       console.log('[RestStudio] Direct fetch failed for external API. Auto-proxying via /api/proxy to bypass CORS...');
       const proxyRes = await fetch('/api/proxy', {
@@ -420,7 +564,6 @@ export async function executeDirectClientFetch(
       console.warn('[RestStudio] Server auto-proxy bypass attempt failed:', proxyErr);
     }
 
-    // 2. Fallback to public CORS proxy services (corsproxy.io, allorigins.win, thingproxy)
     try {
       const publicProxyResult = await tryPublicCorsProxies(method, targetUrl, headers, body);
       if (publicProxyResult && publicProxyResult.status > 0) {
@@ -437,14 +580,14 @@ export async function executeDirectClientFetch(
       headers: {},
       body: JSON.stringify(
         {
-          error: 'Fetch failed across Direct Fetch, Server Axios Proxy, and Public CORS Proxies (corsproxy.io, allorigins.win).',
+          error: 'Fetch failed across Direct Fetch, Server Axios Proxy, and Public CORS Proxies.',
           targetUrl,
           message: err?.message || 'Failed to fetch',
-          cause: 'Browsers enforce Same-Origin Policy (CORS). RestStudio automatically attempted the server proxy and public CORS proxy services.',
+          cause: 'Browsers enforce Same-Origin Policy (CORS).',
           tips: [
             '1. Ensure the target URL is correct, valid, and publicly reachable.',
             '2. Check if the target API endpoint is currently online.',
-            '3. For local APIs (http://localhost), ensure your server is running and listening.',
+            '3. For local APIs (http://localhost), launch via `npm run neu:dev` or `npm run tauri:dev`.',
           ],
         },
         null,
@@ -461,7 +604,6 @@ export async function executeDirectClientFetch(
 
 /**
  * Custom Proxy Fetch
- * Routes requests via a user-defined CORS proxy URL.
  */
 async function executeCustomProxyFetch(
   proxyUrl: string,

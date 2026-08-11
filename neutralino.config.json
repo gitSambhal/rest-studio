@@ -7,6 +7,13 @@
   "documentRoot": "/dist/",
   "enableServer": true,
   "enableLsp": false,
+  "nativeAllowList": [
+    "os.*",
+    "app.*",
+    "window.*",
+    "filesystem.*",
+    "storage.*"
+  ],
   "modes": {
     "window": {
       "title": "RestStudio - Ultra Lightweight API Client",
@@ -18,7 +25,8 @@
       "resizable": true,
       "maximizable": true,
       "hidden": false,
-      "exitProcessOnClose": true
+      "exitProcessOnClose": true,
+      "icon": "/icon.png"
     }
   },
   "cli": {
@@ -27,6 +35,7 @@
     "extensionsPath": "/extensions/",
     "clientLibrary": "/dist/js/neutralino.js",
     "binaryVersion": "5.6.0",
-    "clientVersion": "5.6.0"
+    "clientVersion": "5.6.0",
+    "icon": "/public/icon.png"
   }
 }
